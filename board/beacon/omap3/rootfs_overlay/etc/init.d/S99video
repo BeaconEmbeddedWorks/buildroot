@@ -1,0 +1,31 @@
+#!/bin/sh
+
+SYSLOGD_ARGS=""
+
+# BusyBox' syslogd does not create a pidfile, so pass "-n" in the command line
+# and use "-m" to instruct start-stop-daemon to create one.
+start() {
+	echo 1 > /sys/devices/platform/omapdrm.0/graphics/fb0/blank
+	echo 0 > /sys/devices/platform/omapdrm.0/graphics/fb0/blank
+	return 0 
+}
+
+stop() {
+	echo 1 > /sys/devices/platform/omapdrm.0/graphics/fb0/blank
+}
+
+restart() {
+	start
+}
+
+case "$1" in
+	start|stop|restart)
+		"$1";;
+	reload)
+		# Restart, since there is no true "reload" feature.
+		restart;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+esac
+

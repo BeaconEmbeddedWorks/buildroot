@@ -1,0 +1,3111 @@
+From 208113d81d37f9faa2dd29b042059edb1ac51675 Mon Sep 17 00:00:00 2001
+From: Adam Ford <aford173@gmail.com>
+Date: Wed, 2 Dec 2020 10:49:58 -0600
+Subject: [PATCH] Update 5.4.81 with Beacon Updates
+
+Signed-off-by: Adam Ford <aford173@gmail.com>
+
+diff --git a/Documentation/devicetree/bindings/arm/omap/omap.txt b/Documentation/devicetree/bindings/arm/omap/omap.txt
+index b301f753ed2c..e77635c5422c 100644
+--- a/Documentation/devicetree/bindings/arm/omap/omap.txt
++++ b/Documentation/devicetree/bindings/arm/omap/omap.txt
+@@ -43,7 +43,7 @@ SoC Families:
+ 
+ - OMAP2 generic - defaults to OMAP2420
+   compatible = "ti,omap2"
+-- OMAP3 generic - defaults to OMAP3430
++- OMAP3 generic
+   compatible = "ti,omap3"
+ - OMAP4 generic - defaults to OMAP4430
+   compatible = "ti,omap4"
+@@ -51,6 +51,8 @@ SoC Families:
+   compatible = "ti,omap5"
+ - DRA7 generic - defaults to DRA742
+   compatible = "ti,dra7"
++- AM33x generic
++  compatible = "ti,am33xx"
+ - AM43x generic - defaults to AM4372
+   compatible = "ti,am43"
+ 
+@@ -63,12 +65,14 @@ SoCs:
+ 
+ - OMAP3430
+   compatible = "ti,omap3430", "ti,omap3"
++  legacy: "ti,omap34xx" - please do not use any more
+ - AM3517
+   compatible = "ti,am3517", "ti,omap3"
+ - OMAP3630
+-  compatible = "ti,omap36xx", "ti,omap3"
+-- AM33xx
+-  compatible = "ti,am33xx", "ti,omap3"
++  compatible = "ti,omap3630", "ti,omap3"
++  legacy: "ti,omap36xx" - please do not use any more
++- AM335x
++  compatible = "ti,am33xx"
+ 
+ - OMAP4430
+   compatible = "ti,omap4430", "ti,omap4"
+@@ -110,19 +114,19 @@ SoCs:
+ - AM4372
+   compatible = "ti,am4372", "ti,am43"
+ 
+-Boards:
++Boards (incomplete list of examples):
+ 
+ - OMAP3 BeagleBoard : Low cost community board
+-  compatible = "ti,omap3-beagle", "ti,omap3"
++  compatible = "ti,omap3-beagle", "ti,omap3430", "ti,omap3"
+ 
+ - OMAP3 Tobi with Overo : Commercial expansion board with daughter board
+-  compatible = "gumstix,omap3-overo-tobi", "gumstix,omap3-overo", "ti,omap3"
++  compatible = "gumstix,omap3-overo-tobi", "gumstix,omap3-overo", "ti,omap3430", "ti,omap3"
+ 
+ - OMAP4 SDP : Software Development Board
+-  compatible = "ti,omap4-sdp", "ti,omap4430"
++  compatible = "ti,omap4-sdp", "ti,omap4430", "ti,omap4"
+ 
+ - OMAP4 PandaBoard : Low cost community board
+-  compatible = "ti,omap4-panda", "ti,omap4430"
++  compatible = "ti,omap4-panda", "ti,omap4430", "ti,omap4"
+ 
+ - OMAP4 DuoVero with Parlor : Commercial expansion board with daughter board
+   compatible = "gumstix,omap4-duovero-parlor", "gumstix,omap4-duovero", "ti,omap4430", "ti,omap4";
+@@ -134,16 +138,16 @@ Boards:
+   compatible = "variscite,var-dvk-om44", "variscite,var-som-om44", "ti,omap4460", "ti,omap4";
+ 
+ - OMAP3 EVM : Software Development Board for OMAP35x, AM/DM37x
+-  compatible = "ti,omap3-evm", "ti,omap3"
++  compatible = "ti,omap3-evm", "ti,omap3630", "ti,omap3"
+ 
+ - AM335X EVM : Software Development Board for AM335x
+-  compatible = "ti,am335x-evm", "ti,am33xx", "ti,omap3"
++  compatible = "ti,am335x-evm", "ti,am33xx"
+ 
+ - AM335X Bone : Low cost community board
+-  compatible = "ti,am335x-bone", "ti,am33xx", "ti,omap3"
++  compatible = "ti,am335x-bone", "ti,am33xx"
+ 
+ - AM3359 ICEv2 : Low cost Industrial Communication Engine EVM.
+-  compatible = "ti,am3359-icev2", "ti,am33xx", "ti,omap3"
++  compatible = "ti,am3359-icev2", "ti,am33xx"
+ 
+ - AM335X OrionLXm : Substation Automation Platform
+   compatible = "novatech,am335x-lxm", "ti,am33xx"
+diff --git a/Documentation/devicetree/bindings/cpufreq/ti-cpufreq.txt b/Documentation/devicetree/bindings/cpufreq/ti-cpufreq.txt
+index 0c38e4b8fc51..1758051798fe 100644
+--- a/Documentation/devicetree/bindings/cpufreq/ti-cpufreq.txt
++++ b/Documentation/devicetree/bindings/cpufreq/ti-cpufreq.txt
+@@ -15,12 +15,16 @@ In 'cpus' nodes:
+ 
+ In 'operating-points-v2' table:
+ - compatible: Should be
+-	- 'operating-points-v2-ti-cpu' for am335x, am43xx, and dra7xx/am57xx SoCs
++	- 'operating-points-v2-ti-cpu' for am335x, am43xx, and dra7xx/am57xx,
++	  omap34xx, omap36xx and am3517 SoCs
+ - syscon: A phandle pointing to a syscon node representing the control module
+ 	  register space of the SoC.
+ 
+ Optional properties:
+ --------------------
++- "vdd-supply", "vbb-supply": to define two regulators for dra7xx
++- "cpu0-supply", "vbb-supply": to define two regulators for omap36xx
++
+ For each opp entry in 'operating-points-v2' table:
+ - opp-supported-hw: Two bitfields indicating:
+ 	1. Which revision of the SoC the OPP is supported by
+diff --git a/arch/arm/boot/dts/am3517.dtsi b/arch/arm/boot/dts/am3517.dtsi
+index bf3002009b00..76f819f4ba48 100644
+--- a/arch/arm/boot/dts/am3517.dtsi
++++ b/arch/arm/boot/dts/am3517.dtsi
+@@ -16,6 +16,37 @@
+ 		can = &hecc;
+ 	};
+ 
++	cpus {
++		cpu: cpu@0 {
++			/* Based on OMAP3630 variants OPP50 and OPP100 */
++			operating-points-v2 = <&cpu0_opp_table>;
++
++			clock-latency = <300000>; /* From legacy driver */
++		};
++	};
++
++	cpu0_opp_table: opp-table {
++		compatible = "operating-points-v2-ti-cpu";
++		syscon = <&scm_conf>;
++		/*
++		 * AM3517 TRM only lists 600MHz @ 1.2V, but omap36xx
++		 * appear to operate at 300MHz as well. Since AM3517 only
++		 * lists one operating voltage, it will remain fixed at 1.2V
++		 */
++		opp50-300000000 {
++			opp-hz = /bits/ 64 <300000000>;
++			opp-microvolt = <1200000>;
++			opp-supported-hw = <0xffffffff 0xffffffff>;
++			opp-suspend;
++		};
++
++		opp100-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <1200000>;
++			opp-supported-hw = <0xffffffff 0xffffffff>;
++		};
++	};
++
+ 	ocp@68000000 {
+ 		am35x_otg_hs: am35x_otg_hs@5c040000 {
+ 			compatible = "ti,omap3-musb";
+diff --git a/arch/arm/boot/dts/am3517_mt_ventoux.dts b/arch/arm/boot/dts/am3517_mt_ventoux.dts
+index e507e4ae0d88..e7d7124a34ba 100644
+--- a/arch/arm/boot/dts/am3517_mt_ventoux.dts
++++ b/arch/arm/boot/dts/am3517_mt_ventoux.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TeeJet Mt.Ventoux";
+-	compatible = "teejet,mt_ventoux", "ti,omap3";
++	compatible = "teejet,mt_ventoux", "ti,am3517", "ti,omap3";
+ 
+ 	memory@80000000 {
+ 		device_type = "memory";
+diff --git a/arch/arm/boot/dts/logicpd-som-lv-35xx-devkit.dts b/arch/arm/boot/dts/logicpd-som-lv-35xx-devkit.dts
+index f7a841a28865..2a0a98fe67f0 100644
+--- a/arch/arm/boot/dts/logicpd-som-lv-35xx-devkit.dts
++++ b/arch/arm/boot/dts/logicpd-som-lv-35xx-devkit.dts
+@@ -9,5 +9,5 @@
+ 
+ / {
+ 	model = "LogicPD Zoom OMAP35xx SOM-LV Development Kit";
+-	compatible = "logicpd,dm3730-som-lv-devkit", "ti,omap3";
++	compatible = "logicpd,dm3730-som-lv-devkit", "ti,omap3430", "ti,omap3";
+ };
+diff --git a/arch/arm/boot/dts/logicpd-torpedo-35xx-devkit.dts b/arch/arm/boot/dts/logicpd-torpedo-35xx-devkit.dts
+index 7675bc3fa868..57bae2aa910e 100644
+--- a/arch/arm/boot/dts/logicpd-torpedo-35xx-devkit.dts
++++ b/arch/arm/boot/dts/logicpd-torpedo-35xx-devkit.dts
+@@ -9,5 +9,5 @@
+ 
+ / {
+ 	model = "LogicPD Zoom OMAP35xx Torpedo Development Kit";
+-	compatible = "logicpd,dm3730-torpedo-devkit", "ti,omap3";
++	compatible = "logicpd,dm3730-torpedo-devkit", "ti,omap3430", "ti,omap3";
+ };
+diff --git a/arch/arm/boot/dts/logicpd-torpedo-37xx-devkit.dts b/arch/arm/boot/dts/logicpd-torpedo-37xx-devkit.dts
+index 18c27e85051f..5532db04046c 100644
+--- a/arch/arm/boot/dts/logicpd-torpedo-37xx-devkit.dts
++++ b/arch/arm/boot/dts/logicpd-torpedo-37xx-devkit.dts
+@@ -50,6 +50,20 @@
+ 	};
+ };
+ 
++&uart2 {
++	/delete-property/dma-names;
++	bluetooth {
++		compatible = "ti,wl1283-st";
++		enable-gpios = <&gpio6 2 GPIO_ACTIVE_HIGH>; /* gpio 162 */
++		max-speed = <3000000>;
++	};
++};
++
++/* The DM3730 has a faster L3 than OMAP35, so increase pixel clock */
++&mt9p031_out {
++	pixel-clock-frequency = <90000000>;
++};
++
+ &omap3_pmx_core {
+ 	mmc3_pins: pinmux_mm3_pins {
+ 		pinctrl-single,pins = <
+diff --git a/arch/arm/boot/dts/logicpd-torpedo-baseboard.dtsi b/arch/arm/boot/dts/logicpd-torpedo-baseboard.dtsi
+index e7a8f8addb6e..bd895c5bc8b4 100644
+--- a/arch/arm/boot/dts/logicpd-torpedo-baseboard.dtsi
++++ b/arch/arm/boot/dts/logicpd-torpedo-baseboard.dtsi
+@@ -67,6 +67,12 @@
+ 		#pwm-cells = <3>;
+ 	};
+ 
++	video_reg: video_reg {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-supply";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++	};
+ };
+ 
+ &vaux1 {
+@@ -110,6 +116,7 @@
+ &dss {
+ 	status = "ok";
+ 	vdds_dsi-supply = <&vpll2>;
++	vdda_video-supply = <&video_reg>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&dss_dpi_pins1>;
+ 	port {
+@@ -127,7 +134,6 @@
+ 
+ 	lcd0: display {
+ 		/* This isn't the exact LCD, but the timings meet spec */
+-		/* To make it work, set CONFIG_OMAP2_DSS_MIN_FCK_PER_PCK=4 */
+ 		compatible = "newhaven,nhd-4.3-480272ef-atxl";
+ 		label = "15";
+ 		pinctrl-names = "default";
+diff --git a/arch/arm/boot/dts/logicpd-torpedo-som.dtsi b/arch/arm/boot/dts/logicpd-torpedo-som.dtsi
+index 506b118e511a..3a5228562b0d 100644
+--- a/arch/arm/boot/dts/logicpd-torpedo-som.dtsi
++++ b/arch/arm/boot/dts/logicpd-torpedo-som.dtsi
+@@ -35,6 +35,11 @@
+ 	};
+ };
+ 
++/* The Torpedo doesn't route the USB host pins */
++&usbhshost {
++	status = "disabled";
++};
++
+ &gpmc {
+ 	ranges = <0 0 0x30000000 0x1000000>;	/* CS0: 16MB for NAND */
+ 
+diff --git a/arch/arm/boot/dts/omap3-beagle-xm.dts b/arch/arm/boot/dts/omap3-beagle-xm.dts
+index 1aa99fc1487a..125ed933ca75 100644
+--- a/arch/arm/boot/dts/omap3-beagle-xm.dts
++++ b/arch/arm/boot/dts/omap3-beagle-xm.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3 BeagleBoard xM";
+-	compatible = "ti,omap3-beagle-xm", "ti,omap36xx", "ti,omap3";
++	compatible = "ti,omap3-beagle-xm", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	cpus {
+ 		cpu@0 {
+diff --git a/arch/arm/boot/dts/omap3-beagle.dts b/arch/arm/boot/dts/omap3-beagle.dts
+index e3df3c166902..4ed3f93f5841 100644
+--- a/arch/arm/boot/dts/omap3-beagle.dts
++++ b/arch/arm/boot/dts/omap3-beagle.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3 BeagleBoard";
+-	compatible = "ti,omap3-beagle", "ti,omap3";
++	compatible = "ti,omap3-beagle", "ti,omap3430", "ti,omap3";
+ 
+ 	cpus {
+ 		cpu@0 {
+diff --git a/arch/arm/boot/dts/omap3-cm-t3530.dts b/arch/arm/boot/dts/omap3-cm-t3530.dts
+index 76e52c78cbb4..32dbaeaed147 100644
+--- a/arch/arm/boot/dts/omap3-cm-t3530.dts
++++ b/arch/arm/boot/dts/omap3-cm-t3530.dts
+@@ -9,7 +9,7 @@
+ 
+ / {
+ 	model = "CompuLab CM-T3530";
+-	compatible = "compulab,omap3-cm-t3530", "ti,omap34xx", "ti,omap3";
++	compatible = "compulab,omap3-cm-t3530", "ti,omap3430", "ti,omap34xx", "ti,omap3";
+ 
+ 	/* Regulator to trigger the reset signal of the Wifi module */
+ 	mmc2_sdio_reset: regulator-mmc2-sdio-reset {
+diff --git a/arch/arm/boot/dts/omap3-cm-t3730.dts b/arch/arm/boot/dts/omap3-cm-t3730.dts
+index 6e944dfa0f3d..683819bf0915 100644
+--- a/arch/arm/boot/dts/omap3-cm-t3730.dts
++++ b/arch/arm/boot/dts/omap3-cm-t3730.dts
+@@ -9,7 +9,7 @@
+ 
+ / {
+ 	model = "CompuLab CM-T3730";
+-	compatible = "compulab,omap3-cm-t3730", "ti,omap36xx", "ti,omap3";
++	compatible = "compulab,omap3-cm-t3730", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	wl12xx_vmmc2: wl12xx_vmmc2 {
+ 		compatible = "regulator-fixed";
+diff --git a/arch/arm/boot/dts/omap3-cpu-thermal.dtsi b/arch/arm/boot/dts/omap3-cpu-thermal.dtsi
+index 235ecfd61e2d..dfbd0cb0b00b 100644
+--- a/arch/arm/boot/dts/omap3-cpu-thermal.dtsi
++++ b/arch/arm/boot/dts/omap3-cpu-thermal.dtsi
+@@ -17,4 +17,25 @@ cpu_thermal: cpu_thermal {
+ 
+ 			/* sensor       ID */
+ 	thermal-sensors = <&bandgap     0>;
++
++	cpu_trips: trips {
++		cpu_alert0: cpu_alert {
++			temperature = <90000>; /* millicelsius */
++			hysteresis = <2000>; /* millicelsius */
++			type = "passive";
++		};
++		cpu_crit: cpu_crit {
++			temperature = <105000>; /* millicelsius */
++			hysteresis = <2000>; /* millicelsius */
++			type = "critical";
++		};
++	};
++
++	cpu_cooling_maps: cooling-maps {
++		map0 {
++			trip = <&cpu_alert0>;
++			cooling-device =
++				<&cpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++		};
++	};
+ };
+diff --git a/arch/arm/boot/dts/omap3-devkit8000-lcd43.dts b/arch/arm/boot/dts/omap3-devkit8000-lcd43.dts
+index a80fc60bc773..afed85078ad8 100644
+--- a/arch/arm/boot/dts/omap3-devkit8000-lcd43.dts
++++ b/arch/arm/boot/dts/omap3-devkit8000-lcd43.dts
+@@ -11,7 +11,7 @@
+ #include "omap3-devkit8000-lcd-common.dtsi"
+ / {
+ 	model = "TimLL OMAP3 Devkit8000 with 4.3'' LCD panel";
+-	compatible = "timll,omap3-devkit8000", "ti,omap3";
++	compatible = "timll,omap3-devkit8000", "ti,omap3430", "ti,omap3";
+ 
+ 	lcd0: display {
+ 		panel-timing {
+diff --git a/arch/arm/boot/dts/omap3-devkit8000-lcd70.dts b/arch/arm/boot/dts/omap3-devkit8000-lcd70.dts
+index 0753776071f8..07c51a105c0d 100644
+--- a/arch/arm/boot/dts/omap3-devkit8000-lcd70.dts
++++ b/arch/arm/boot/dts/omap3-devkit8000-lcd70.dts
+@@ -11,7 +11,7 @@
+ #include "omap3-devkit8000-lcd-common.dtsi"
+ / {
+ 	model = "TimLL OMAP3 Devkit8000 with 7.0'' LCD panel";
+-	compatible = "timll,omap3-devkit8000", "ti,omap3";
++	compatible = "timll,omap3-devkit8000", "ti,omap3430", "ti,omap3";
+ 
+ 	lcd0: display {
+ 		panel-timing {
+diff --git a/arch/arm/boot/dts/omap3-devkit8000.dts b/arch/arm/boot/dts/omap3-devkit8000.dts
+index faafc48d8f61..162d0726b008 100644
+--- a/arch/arm/boot/dts/omap3-devkit8000.dts
++++ b/arch/arm/boot/dts/omap3-devkit8000.dts
+@@ -7,7 +7,7 @@
+ #include "omap3-devkit8000-common.dtsi"
+ / {
+ 	model = "TimLL OMAP3 Devkit8000";
+-	compatible = "timll,omap3-devkit8000", "ti,omap3";
++	compatible = "timll,omap3-devkit8000", "ti,omap3430", "ti,omap3";
+ 
+ 	aliases {
+ 		display1 = &dvi0;
+diff --git a/arch/arm/boot/dts/omap3-gta04.dtsi b/arch/arm/boot/dts/omap3-gta04.dtsi
+index b6ef1a7ac8a4..409a758c99f1 100644
+--- a/arch/arm/boot/dts/omap3-gta04.dtsi
++++ b/arch/arm/boot/dts/omap3-gta04.dtsi
+@@ -11,7 +11,7 @@
+ 
+ / {
+ 	model = "OMAP3 GTA04";
+-	compatible = "ti,omap3-gta04", "ti,omap36xx", "ti,omap3";
++	compatible = "ti,omap3-gta04", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	cpus {
+ 		cpu@0 {
+diff --git a/arch/arm/boot/dts/omap3-ha-lcd.dts b/arch/arm/boot/dts/omap3-ha-lcd.dts
+index badb9b3c8897..c9ecbc45c8e2 100644
+--- a/arch/arm/boot/dts/omap3-ha-lcd.dts
++++ b/arch/arm/boot/dts/omap3-ha-lcd.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3 HEAD acoustics LCD-baseboard with TAO3530 SOM";
+-	compatible = "headacoustics,omap3-ha-lcd", "technexion,omap3-tao3530", "ti,omap34xx", "ti,omap3";
++	compatible = "headacoustics,omap3-ha-lcd", "technexion,omap3-tao3530", "ti,omap3430", "ti,omap34xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core {
+diff --git a/arch/arm/boot/dts/omap3-ha.dts b/arch/arm/boot/dts/omap3-ha.dts
+index a5365252bfbe..35c4e15abeb7 100644
+--- a/arch/arm/boot/dts/omap3-ha.dts
++++ b/arch/arm/boot/dts/omap3-ha.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3 HEAD acoustics baseboard with TAO3530 SOM";
+-	compatible = "headacoustics,omap3-ha", "technexion,omap3-tao3530", "ti,omap34xx", "ti,omap3";
++	compatible = "headacoustics,omap3-ha", "technexion,omap3-tao3530", "ti,omap3430", "ti,omap34xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core {
+diff --git a/arch/arm/boot/dts/omap3-igep0020-rev-f.dts b/arch/arm/boot/dts/omap3-igep0020-rev-f.dts
+index 03dcd05fb8a0..d134ce1cffc0 100644
+--- a/arch/arm/boot/dts/omap3-igep0020-rev-f.dts
++++ b/arch/arm/boot/dts/omap3-igep0020-rev-f.dts
+@@ -10,7 +10,7 @@
+ 
+ / {
+ 	model = "IGEPv2 Rev. F (TI OMAP AM/DM37x)";
+-	compatible = "isee,omap3-igep0020-rev-f", "ti,omap36xx", "ti,omap3";
++	compatible = "isee,omap3-igep0020-rev-f", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	/* Regulator to trigger the WL_EN signal of the Wifi module */
+ 	lbep5clwmc_wlen: regulator-lbep5clwmc-wlen {
+diff --git a/arch/arm/boot/dts/omap3-igep0020.dts b/arch/arm/boot/dts/omap3-igep0020.dts
+index 6d0519e3dfd0..e341535a7162 100644
+--- a/arch/arm/boot/dts/omap3-igep0020.dts
++++ b/arch/arm/boot/dts/omap3-igep0020.dts
+@@ -10,7 +10,7 @@
+ 
+ / {
+ 	model = "IGEPv2 Rev. C (TI OMAP AM/DM37x)";
+-	compatible = "isee,omap3-igep0020", "ti,omap36xx", "ti,omap3";
++	compatible = "isee,omap3-igep0020", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	vmmcsdio_fixed: fixedregulator-mmcsdio {
+ 		compatible = "regulator-fixed";
+diff --git a/arch/arm/boot/dts/omap3-igep0030-rev-g.dts b/arch/arm/boot/dts/omap3-igep0030-rev-g.dts
+index 060acd1e803a..9ca1d0f61964 100644
+--- a/arch/arm/boot/dts/omap3-igep0030-rev-g.dts
++++ b/arch/arm/boot/dts/omap3-igep0030-rev-g.dts
+@@ -10,7 +10,7 @@
+ 
+ / {
+ 	model = "IGEP COM MODULE Rev. G (TI OMAP AM/DM37x)";
+-	compatible = "isee,omap3-igep0030-rev-g", "ti,omap36xx", "ti,omap3";
++	compatible = "isee,omap3-igep0030-rev-g", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	/* Regulator to trigger the WL_EN signal of the Wifi module */
+ 	lbep5clwmc_wlen: regulator-lbep5clwmc-wlen {
+diff --git a/arch/arm/boot/dts/omap3-igep0030.dts b/arch/arm/boot/dts/omap3-igep0030.dts
+index 25170bd3c573..32f31035daa2 100644
+--- a/arch/arm/boot/dts/omap3-igep0030.dts
++++ b/arch/arm/boot/dts/omap3-igep0030.dts
+@@ -10,7 +10,7 @@
+ 
+ / {
+ 	model = "IGEP COM MODULE Rev. E (TI OMAP AM/DM37x)";
+-	compatible = "isee,omap3-igep0030", "ti,omap36xx", "ti,omap3";
++	compatible = "isee,omap3-igep0030", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	vmmcsdio_fixed: fixedregulator-mmcsdio {
+ 		compatible = "regulator-fixed";
+diff --git a/arch/arm/boot/dts/omap3-ldp.dts b/arch/arm/boot/dts/omap3-ldp.dts
+index 9a5fde2d9bce..ec9ba04ef43b 100644
+--- a/arch/arm/boot/dts/omap3-ldp.dts
++++ b/arch/arm/boot/dts/omap3-ldp.dts
+@@ -10,7 +10,7 @@
+ 
+ / {
+ 	model = "TI OMAP3430 LDP (Zoom1 Labrador)";
+-	compatible = "ti,omap3-ldp", "ti,omap3";
++	compatible = "ti,omap3-ldp", "ti,omap3430", "ti,omap3";
+ 
+ 	memory@80000000 {
+ 		device_type = "memory";
+diff --git a/arch/arm/boot/dts/omap3-lilly-a83x.dtsi b/arch/arm/boot/dts/omap3-lilly-a83x.dtsi
+index c22833d4e568..73d477898ec2 100644
+--- a/arch/arm/boot/dts/omap3-lilly-a83x.dtsi
++++ b/arch/arm/boot/dts/omap3-lilly-a83x.dtsi
+@@ -7,7 +7,7 @@
+ 
+ / {
+ 	model = "INCOstartec LILLY-A83X module (DM3730)";
+-	compatible = "incostartec,omap3-lilly-a83x", "ti,omap36xx", "ti,omap3";
++	compatible = "incostartec,omap3-lilly-a83x", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	chosen {
+ 			bootargs = "console=ttyO0,115200n8 vt.global_cursor_default=0 consoleblank=0";
+diff --git a/arch/arm/boot/dts/omap3-lilly-dbb056.dts b/arch/arm/boot/dts/omap3-lilly-dbb056.dts
+index fec335400074..ecb4ef738e07 100644
+--- a/arch/arm/boot/dts/omap3-lilly-dbb056.dts
++++ b/arch/arm/boot/dts/omap3-lilly-dbb056.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "INCOstartec LILLY-DBB056 (DM3730)";
+-	compatible = "incostartec,omap3-lilly-dbb056", "incostartec,omap3-lilly-a83x", "ti,omap36xx", "ti,omap3";
++	compatible = "incostartec,omap3-lilly-dbb056", "incostartec,omap3-lilly-a83x", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &twl {
+diff --git a/arch/arm/boot/dts/omap3-n9.dts b/arch/arm/boot/dts/omap3-n9.dts
+index 74c0ff2350d3..2495a696cec6 100644
+--- a/arch/arm/boot/dts/omap3-n9.dts
++++ b/arch/arm/boot/dts/omap3-n9.dts
+@@ -12,7 +12,7 @@
+ 
+ / {
+ 	model = "Nokia N9";
+-	compatible = "nokia,omap3-n9", "ti,omap36xx", "ti,omap3";
++	compatible = "nokia,omap3-n9", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &i2c2 {
+diff --git a/arch/arm/boot/dts/omap3-n950-n9.dtsi b/arch/arm/boot/dts/omap3-n950-n9.dtsi
+index 6681d4519e97..a075b63f3087 100644
+--- a/arch/arm/boot/dts/omap3-n950-n9.dtsi
++++ b/arch/arm/boot/dts/omap3-n950-n9.dtsi
+@@ -11,13 +11,6 @@
+ 	cpus {
+ 		cpu@0 {
+ 			cpu0-supply = <&vcc>;
+-			operating-points = <
+-				/* kHz    uV */
+-				300000  1012500
+-				600000  1200000
+-				800000  1325000
+-				1000000	1375000
+-			>;
+ 		};
+ 	};
+ 
+diff --git a/arch/arm/boot/dts/omap3-n950.dts b/arch/arm/boot/dts/omap3-n950.dts
+index 9886bf8b90ab..31d47a1fad84 100644
+--- a/arch/arm/boot/dts/omap3-n950.dts
++++ b/arch/arm/boot/dts/omap3-n950.dts
+@@ -12,7 +12,7 @@
+ 
+ / {
+ 	model = "Nokia N950";
+-	compatible = "nokia,omap3-n950", "ti,omap36xx", "ti,omap3";
++	compatible = "nokia,omap3-n950", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	keys {
+ 		compatible = "gpio-keys";
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-alto35.dts b/arch/arm/boot/dts/omap3-overo-storm-alto35.dts
+index 18338576c41d..7f04dfad8203 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-alto35.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-alto35.dts
+@@ -14,5 +14,5 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Alto35";
+-	compatible = "gumstix,omap3-overo-alto35", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-alto35", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-chestnut43.dts b/arch/arm/boot/dts/omap3-overo-storm-chestnut43.dts
+index f204c8af8281..bc5a04e03336 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-chestnut43.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-chestnut43.dts
+@@ -14,7 +14,7 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Chestnut43";
+-	compatible = "gumstix,omap3-overo-chestnut43", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-chestnut43", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-gallop43.dts b/arch/arm/boot/dts/omap3-overo-storm-gallop43.dts
+index c633f7cee68e..065c31cbf0e2 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-gallop43.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-gallop43.dts
+@@ -14,7 +14,7 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Gallop43";
+-	compatible = "gumstix,omap3-overo-gallop43", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-gallop43", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-palo35.dts b/arch/arm/boot/dts/omap3-overo-storm-palo35.dts
+index fb88ebc9858c..e38c1c51392c 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-palo35.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-palo35.dts
+@@ -14,7 +14,7 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Palo35";
+-	compatible = "gumstix,omap3-overo-palo35", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-palo35", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-palo43.dts b/arch/arm/boot/dts/omap3-overo-storm-palo43.dts
+index 76cca00d97b6..e6dc23159c4d 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-palo43.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-palo43.dts
+@@ -14,7 +14,7 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Palo43";
+-	compatible = "gumstix,omap3-overo-palo43", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-palo43", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-summit.dts b/arch/arm/boot/dts/omap3-overo-storm-summit.dts
+index cc081a9e4c1e..587c08ce282d 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-summit.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-summit.dts
+@@ -14,7 +14,7 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Summit";
+-	compatible = "gumstix,omap3-overo-summit", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-summit", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-tobi.dts b/arch/arm/boot/dts/omap3-overo-storm-tobi.dts
+index 1de41c0826e0..f57de6010994 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-tobi.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-tobi.dts
+@@ -14,6 +14,6 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on Tobi";
+-	compatible = "gumstix,omap3-overo-tobi", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-tobi", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+diff --git a/arch/arm/boot/dts/omap3-overo-storm-tobiduo.dts b/arch/arm/boot/dts/omap3-overo-storm-tobiduo.dts
+index 9ed13118ed8e..281af6c113be 100644
+--- a/arch/arm/boot/dts/omap3-overo-storm-tobiduo.dts
++++ b/arch/arm/boot/dts/omap3-overo-storm-tobiduo.dts
+@@ -14,5 +14,5 @@
+ 
+ / {
+ 	model = "OMAP36xx/AM37xx/DM37xx Gumstix Overo on TobiDuo";
+-	compatible = "gumstix,omap3-overo-tobiduo", "gumstix,omap3-overo", "ti,omap36xx", "ti,omap3";
++	compatible = "gumstix,omap3-overo-tobiduo", "gumstix,omap3-overo", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+diff --git a/arch/arm/boot/dts/omap3-pandora-1ghz.dts b/arch/arm/boot/dts/omap3-pandora-1ghz.dts
+index 81b957f33c9f..ea509956d7ac 100644
+--- a/arch/arm/boot/dts/omap3-pandora-1ghz.dts
++++ b/arch/arm/boot/dts/omap3-pandora-1ghz.dts
+@@ -16,7 +16,7 @@
+ / {
+ 	model = "Pandora Handheld Console 1GHz";
+ 
+-	compatible = "openpandora,omap3-pandora-1ghz", "ti,omap36xx", "ti,omap3";
++	compatible = "openpandora,omap3-pandora-1ghz", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core2 {
+diff --git a/arch/arm/boot/dts/omap3-sbc-t3530.dts b/arch/arm/boot/dts/omap3-sbc-t3530.dts
+index ae96002abb3b..24bf3fd86641 100644
+--- a/arch/arm/boot/dts/omap3-sbc-t3530.dts
++++ b/arch/arm/boot/dts/omap3-sbc-t3530.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "CompuLab SBC-T3530 with CM-T3530";
+-	compatible = "compulab,omap3-sbc-t3530", "compulab,omap3-cm-t3530", "ti,omap34xx", "ti,omap3";
++	compatible = "compulab,omap3-sbc-t3530", "compulab,omap3-cm-t3530", "ti,omap3430", "ti,omap34xx", "ti,omap3";
+ 
+ 	aliases {
+ 		display0 = &dvi0;
+diff --git a/arch/arm/boot/dts/omap3-sbc-t3730.dts b/arch/arm/boot/dts/omap3-sbc-t3730.dts
+index 7de6df16fc17..eb3893b9535e 100644
+--- a/arch/arm/boot/dts/omap3-sbc-t3730.dts
++++ b/arch/arm/boot/dts/omap3-sbc-t3730.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "CompuLab SBC-T3730 with CM-T3730";
+-	compatible = "compulab,omap3-sbc-t3730", "compulab,omap3-cm-t3730", "ti,omap36xx", "ti,omap3";
++	compatible = "compulab,omap3-sbc-t3730", "compulab,omap3-cm-t3730", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	aliases {
+ 		display0 = &dvi0;
+diff --git a/arch/arm/boot/dts/omap3-sniper.dts b/arch/arm/boot/dts/omap3-sniper.dts
+index 40a87330e8c3..b6879cdc5c13 100644
+--- a/arch/arm/boot/dts/omap3-sniper.dts
++++ b/arch/arm/boot/dts/omap3-sniper.dts
+@@ -9,7 +9,7 @@
+ 
+ / {
+ 	model = "LG Optimus Black";
+-	compatible = "lg,omap3-sniper", "ti,omap36xx", "ti,omap3";
++	compatible = "lg,omap3-sniper", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	cpus {
+ 		cpu@0 {
+diff --git a/arch/arm/boot/dts/omap3-thunder.dts b/arch/arm/boot/dts/omap3-thunder.dts
+index 6276e7079b36..64221e3b3477 100644
+--- a/arch/arm/boot/dts/omap3-thunder.dts
++++ b/arch/arm/boot/dts/omap3-thunder.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3 Thunder baseboard with TAO3530 SOM";
+-	compatible = "technexion,omap3-thunder", "technexion,omap3-tao3530", "ti,omap34xx", "ti,omap3";
++	compatible = "technexion,omap3-thunder", "technexion,omap3-tao3530", "ti,omap3430", "ti,omap34xx", "ti,omap3";
+ };
+ 
+ &omap3_pmx_core {
+diff --git a/arch/arm/boot/dts/omap3-zoom3.dts b/arch/arm/boot/dts/omap3-zoom3.dts
+index db3a2fe84e99..d240e39f2151 100644
+--- a/arch/arm/boot/dts/omap3-zoom3.dts
++++ b/arch/arm/boot/dts/omap3-zoom3.dts
+@@ -9,7 +9,7 @@
+ 
+ / {
+ 	model = "TI Zoom3";
+-	compatible = "ti,omap3-zoom3", "ti,omap36xx", "ti,omap3";
++	compatible = "ti,omap3-zoom3", "ti,omap3630", "ti,omap36xx", "ti,omap3";
+ 
+ 	cpus {
+ 		cpu@0 {
+diff --git a/arch/arm/boot/dts/omap3.dtsi b/arch/arm/boot/dts/omap3.dtsi
+index 4043ecb38016..b71da01c7665 100644
+--- a/arch/arm/boot/dts/omap3.dtsi
++++ b/arch/arm/boot/dts/omap3.dtsi
+@@ -501,7 +501,7 @@
+ 			clock-names = "fck";
+ 			status = "disabled";
+ 		};
+-
++		
+ 		mcbsp2: mcbsp@49022000 {
+ 			compatible = "ti,omap3-mcbsp";
+ 			reg = <0x49022000 0xff>,
+diff --git a/arch/arm/boot/dts/omap3430-sdp.dts b/arch/arm/boot/dts/omap3430-sdp.dts
+index 0abd61108a53..7bfde8aac7ae 100644
+--- a/arch/arm/boot/dts/omap3430-sdp.dts
++++ b/arch/arm/boot/dts/omap3430-sdp.dts
+@@ -8,7 +8,7 @@
+ 
+ / {
+ 	model = "TI OMAP3430 SDP";
+-	compatible = "ti,omap3430-sdp", "ti,omap3";
++	compatible = "ti,omap3430-sdp", "ti,omap3430", "ti,omap3";
+ 
+ 	memory@80000000 {
+ 		device_type = "memory";
+diff --git a/arch/arm/boot/dts/omap34xx.dtsi b/arch/arm/boot/dts/omap34xx.dtsi
+index 7b09cbee8bb8..bc92f436cf72 100644
+--- a/arch/arm/boot/dts/omap34xx.dtsi
++++ b/arch/arm/boot/dts/omap34xx.dtsi
+@@ -10,22 +10,72 @@
+ 
+ #include <dt-bindings/bus/ti-sysc.h>
+ #include <dt-bindings/media/omap3-isp.h>
++#include <dt-bindings/bus/ti-sysc.h>
+ 
+ #include "omap3.dtsi"
+ 
+ / {
+ 	cpus {
+ 		cpu: cpu@0 {
+-			/* OMAP343x/OMAP35xx variants OPP1-5 */
+-			operating-points = <
+-				/* kHz    uV */
+-				125000   975000
+-				250000  1075000
+-				500000  1200000
+-				550000  1270000
+-				600000  1350000
+-			>;
++			/* OMAP343x/OMAP35xx variants OPP1-6 */
++			operating-points-v2 = <&cpu0_opp_table>;
++
+ 			clock-latency = <300000>; /* From legacy driver */
++			#cooling-cells = <2>;
++		};
++	};
++
++	/* see Documentation/devicetree/bindings/opp/opp.txt */
++	cpu0_opp_table: opp-table {
++		compatible = "operating-points-v2-ti-cpu";
++		syscon = <&scm_conf>;
++
++		opp1-125000000 {
++			opp-hz = /bits/ 64 <125000000>;
++			/*
++			 * we currently only select the max voltage from table
++			 * Table 3-3 of the omap3530 Data sheet (SPRS507F).
++			 * Format is: <target min max>
++			 */
++			opp-microvolt = <975000 975000 975000>;
++			/*
++			 * first value is silicon revision bit mask
++			 * second one 720MHz Device Identification bit mask
++			 */
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp2-250000000 {
++			opp-hz = /bits/ 64 <250000000>;
++			opp-microvolt = <1075000 1075000 1075000>;
++			opp-supported-hw = <0xffffffff 3>;
++			opp-suspend;
++		};
++
++		opp3-500000000 {
++			opp-hz = /bits/ 64 <500000000>;
++			opp-microvolt = <1200000 1200000 1200000>;
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp4-550000000 {
++			opp-hz = /bits/ 64 <550000000>;
++			opp-microvolt = <1275000 1275000 1275000>;
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp5-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <1350000 1350000 1350000>;
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp6-720000000 {
++			opp-hz = /bits/ 64 <720000000>;
++			opp-microvolt = <1350000 1350000 1350000>;
++			/* only high-speed grade omap3530 devices */
++			opp-supported-hw = <0xffffffff 2>;
++			turbo-mode;
+ 		};
+ 	};
+ 
+@@ -63,6 +113,30 @@
+ 			#thermal-sensor-cells = <0>;
+ 		};
+ 
++		/* Likely needs to be tagged disabled on HS devices */
++		rng_target: target-module@480a0000 {
++			compatible = "ti,sysc-omap2", "ti,sysc";
++			reg = <0x480a003c 0x4>,
++			      <0x480a0040 0x4>,
++			      <0x480a0044 0x4>;
++			reg-names = "rev", "sysc", "syss";
++			ti,sysc-mask = <(SYSC_OMAP2_AUTOIDLE)>;
++			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
++					<SYSC_IDLE_NO>;
++			ti,syss-mask = <1>;
++			clocks = <&rng_ick>;
++			clock-names = "ick";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0 0x480a0000 0x2000>;
++
++			rng: rng@0 {
++				compatible = "ti,omap2-rng";
++				reg = <0x0 0x2000>;
++				interrupts = <52>;
++			};
++		};
++
+ 		target-module@480cb000 {
+ 			compatible = "ti,sysc-omap3430-sr", "ti,sysc";
+ 			ti,hwmods = "smartreflex_core";
+diff --git a/arch/arm/boot/dts/omap36xx.dtsi b/arch/arm/boot/dts/omap36xx.dtsi
+index 1e552f08f120..c94006220b03 100644
+--- a/arch/arm/boot/dts/omap36xx.dtsi
++++ b/arch/arm/boot/dts/omap36xx.dtsi
+@@ -19,18 +19,68 @@
+ 	};
+ 
+ 	cpus {
+-		/* OMAP3630/OMAP37xx 'standard device' variants OPP50 to OPP130 */
++		/* OMAP3630/OMAP37xx variants OPP50 to OPP130 and OPP1G */
+ 		cpu: cpu@0 {
+-			operating-points = <
+-				/* kHz    uV */
+-				300000  1012500
+-				600000  1200000
+-				800000  1325000
+-			>;
+-			clock-latency = <300000>; /* From legacy driver */
++			operating-points-v2 = <&cpu0_opp_table>;
++
++			vbb-supply = <&abb_mpu_iva>;
++			clock-latency = <300000>; /* From omap-cpufreq driver */
++			#cooling-cells = <2>;
+ 		};
+ 	};
+ 
++	/* see Documentation/devicetree/bindings/opp/opp.txt */
++	cpu0_opp_table: opp-table {
++		compatible = "operating-points-v2-ti-cpu";
++		syscon = <&scm_conf>;
++
++		opp50-300000000 {
++			opp-hz = /bits/ 64 <300000000>;
++			/*
++			 * we currently only select the max voltage from table
++			 * Table 4-19 of the DM3730 Data sheet (SPRS685B)
++			 * Format is:	cpu0-supply:	<target min max>
++			 *		vbb-supply:	<target min max>
++			 */
++			opp-microvolt = <1012500 1012500 1012500>,
++					 <1012500 1012500 1012500>;
++			/*
++			 * first value is silicon revision bit mask
++			 * second one is "speed binned" bit mask
++			 */
++			opp-supported-hw = <0xffffffff 3>;
++			opp-suspend;
++		};
++
++		opp100-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <1200000 1200000 1200000>,
++					 <1200000 1200000 1200000>;
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp130-800000000 {
++			opp-hz = /bits/ 64 <800000000>;
++			opp-microvolt = <1325000 1325000 1325000>,
++					 <1325000 1325000 1325000>;
++			opp-supported-hw = <0xffffffff 3>;
++		};
++
++		opp1g-1000000000 {
++			opp-hz = /bits/ 64 <1000000000>;
++			opp-microvolt = <1375000 1375000 1375000>,
++					 <1375000 1375000 1375000>;
++			/* only on am/dm37x with speed-binned bit set */
++			opp-supported-hw = <0xffffffff 2>;
++			/* turbo-mode; */
++		};
++	};
++
++	opp_supply_mpu_iva: opp_supply {
++		compatible = "ti,omap-opp-supply";
++		ti,absolute-max-voltage-uv = <1375000>;
++	};
++
+ 	ocp@68000000 {
+ 		uart4: serial@49042000 {
+ 			compatible = "ti,omap3-uart";
+@@ -95,6 +145,30 @@
+ 			#thermal-sensor-cells = <0>;
+ 		};
+ 
++		/* Likely needs to be tagged disabled on HS devices */
++		rng_target: target-module@480a0000 {
++			compatible = "ti,sysc-omap2", "ti,sysc";
++			reg = <0x480a003c 0x4>,
++			      <0x480a0040 0x4>,
++			      <0x480a0044 0x4>;
++			reg-names = "rev", "sysc", "syss";
++			ti,sysc-mask = <(SYSC_OMAP2_AUTOIDLE)>;
++			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
++					<SYSC_IDLE_NO>;
++			ti,syss-mask = <1>;
++			clocks = <&rng_ick>;
++			clock-names = "ick";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0 0x480a0000 0x2000>;
++
++			rng: rng@0 {
++				compatible = "ti,omap2-rng";
++				reg = <0x0 0x2000>;
++				interrupts = <52>;
++			};
++		};
++
+ 		target-module@480cb000 {
+ 			compatible = "ti,sysc-omap3630-sr", "ti,sysc";
+ 			ti,hwmods = "smartreflex_core";
+diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
+index 4ec69fb8a698..e07a6255345b 100644
+--- a/arch/arm/configs/omap2plus_defconfig
++++ b/arch/arm/configs/omap2plus_defconfig
+@@ -1,4 +1,3 @@
+-CONFIG_KERNEL_LZMA=y
+ CONFIG_SYSVIPC=y
+ CONFIG_POSIX_MQUEUE=y
+ CONFIG_AUDIT=y
+@@ -22,6 +21,7 @@ CONFIG_CGROUP_CPUACCT=y
+ CONFIG_CGROUP_PERF=y
+ CONFIG_NAMESPACES=y
+ CONFIG_BLK_DEV_INITRD=y
++CONFIG_CC_OPTIMIZE_FOR_SIZE=y
+ CONFIG_EXPERT=y
+ CONFIG_SLAB=y
+ CONFIG_PROFILING=y
+@@ -91,6 +91,7 @@ CONFIG_IP_PNP_DHCP=y
+ CONFIG_IP_PNP_BOOTP=y
+ CONFIG_IP_PNP_RARP=y
+ CONFIG_NETFILTER=y
++CONFIG_BRIDGE=y
+ CONFIG_PHONET=m
+ CONFIG_CAN=m
+ CONFIG_CAN_C_CAN=m
+@@ -120,6 +121,7 @@ CONFIG_AF_RXRPC=m
+ CONFIG_RXKAD=y
+ CONFIG_CFG80211=m
+ CONFIG_MAC80211=m
++CONFIG_RFKILL=m
+ CONFIG_PCI=y
+ CONFIG_PCI_MSI=y
+ CONFIG_PCI_DRA7XX_EP=y
+@@ -128,7 +130,6 @@ CONFIG_PCI_ENDPOINT_CONFIGFS=y
+ CONFIG_PCI_EPF_TEST=m
+ CONFIG_DEVTMPFS=y
+ CONFIG_DEVTMPFS_MOUNT=y
+-CONFIG_DMA_CMA=y
+ CONFIG_OMAP_OCP2SCP=y
+ CONFIG_CONNECTOR=m
+ CONFIG_MTD=y
+@@ -139,7 +140,6 @@ CONFIG_MTD_CFI=y
+ CONFIG_MTD_CFI_INTELEXT=y
+ CONFIG_MTD_PHYSMAP=y
+ CONFIG_MTD_PHYSMAP_OF=y
+-CONFIG_MTD_M25P80=m
+ CONFIG_MTD_ONENAND=y
+ CONFIG_MTD_ONENAND_VERIFY_WRITE=y
+ CONFIG_MTD_ONENAND_OMAP2=y
+@@ -156,6 +156,8 @@ CONFIG_SENSORS_TSL2550=m
+ CONFIG_SRAM=y
+ CONFIG_PCI_ENDPOINT_TEST=m
+ CONFIG_EEPROM_AT24=m
++CONFIG_LPD_EEPROM=m
++CONFIG_EEPROM_AT25=m
+ CONFIG_BLK_DEV_SD=y
+ CONFIG_SCSI_SCAN_ASYNC=y
+ CONFIG_ATA=y
+@@ -280,6 +282,7 @@ CONFIG_HDQ_MASTER_OMAP=m
+ CONFIG_POWER_AVS=y
+ CONFIG_POWER_RESET=y
+ CONFIG_POWER_RESET_GPIO=y
++CONFIG_PDA_POWER=m
+ CONFIG_BATTERY_BQ27XXX=m
+ CONFIG_CHARGER_ISP1704=m
+ CONFIG_CHARGER_TWL4030=m
+@@ -294,6 +297,7 @@ CONFIG_THERMAL_GOV_FAIR_SHARE=y
+ CONFIG_THERMAL_GOV_USER_SPACE=y
+ CONFIG_CPU_THERMAL=y
+ CONFIG_TI_THERMAL=y
++CONFIG_OMAP3_THERMAL=y
+ CONFIG_OMAP4_THERMAL=y
+ CONFIG_OMAP5_THERMAL=y
+ CONFIG_DRA752_THERMAL=y
+@@ -343,28 +347,26 @@ CONFIG_VIDEO_OMAP3=m
+ CONFIG_CEC_PLATFORM_DRIVERS=y
+ # CONFIG_MEDIA_SUBDRV_AUTOSELECT is not set
+ CONFIG_VIDEO_TVP5150=m
++CONFIG_VIDEO_MT9P031=m
+ CONFIG_DRM=m
+ CONFIG_DRM_OMAP=m
+ CONFIG_OMAP5_DSS_HDMI=y
+ CONFIG_OMAP2_DSS_SDI=y
+ CONFIG_OMAP2_DSS_DSI=y
+ CONFIG_DRM_OMAP_ENCODER_OPA362=m
+-CONFIG_DRM_OMAP_ENCODER_TFP410=m
+ CONFIG_DRM_OMAP_ENCODER_TPD12S015=m
+-CONFIG_DRM_OMAP_CONNECTOR_DVI=m
+ CONFIG_DRM_OMAP_CONNECTOR_HDMI=m
+ CONFIG_DRM_OMAP_CONNECTOR_ANALOG_TV=m
+-CONFIG_DRM_OMAP_PANEL_DPI=m
+ CONFIG_DRM_OMAP_PANEL_DSI_CM=m
+ CONFIG_DRM_TILCDC=m
+ CONFIG_DRM_PANEL_SIMPLE=m
+-CONFIG_DRM_TI_TFP410=m
+ CONFIG_DRM_PANEL_LG_LB035Q02=m
+ CONFIG_DRM_PANEL_NEC_NL8048HL11=m
+ CONFIG_DRM_PANEL_SHARP_LS037V7DW01=m
+ CONFIG_DRM_PANEL_SONY_ACX565AKM=m
+ CONFIG_DRM_PANEL_TPO_TD028TTEC1=m
+ CONFIG_DRM_PANEL_TPO_TD043MTEA1=m
++CONFIG_DRM_TI_TFP410=m
+ CONFIG_FB=y
+ CONFIG_FIRMWARE_EDID=y
+ CONFIG_FB_MODE_HELPERS=y
+@@ -478,7 +480,7 @@ CONFIG_RTC_CLASS=y
+ CONFIG_RTC_DRV_DS1307=m
+ CONFIG_RTC_DRV_M41T80=m
+ CONFIG_RTC_DRV_TWL92330=y
+-CONFIG_RTC_DRV_TWL4030=m
++CONFIG_RTC_DRV_TWL4030=y
+ CONFIG_RTC_DRV_PALMAS=m
+ CONFIG_RTC_DRV_OMAP=m
+ CONFIG_RTC_DRV_CPCAP=m
+@@ -493,6 +495,7 @@ CONFIG_WKUP_M3_IPC=m
+ CONFIG_EXTCON_PALMAS=m
+ CONFIG_EXTCON_USB_GPIO=m
+ CONFIG_TI_EMIF=m
++CONFIG_OMAP_GPMC_DEBUG=y
+ CONFIG_TI_EMIF_SRAM=m
+ CONFIG_IIO=m
+ CONFIG_IIO_SW_DEVICE=m
+@@ -539,11 +542,16 @@ CONFIG_NLS_CODEPAGE_437=y
+ CONFIG_NLS_ISO8859_1=y
+ CONFIG_SECURITY=y
+ CONFIG_CRYPTO_MICHAEL_MIC=y
++CONFIG_CRYPTO_DEV_OMAP=m
++CONFIG_CRYPTO_DEV_OMAP_SHAM=m
++CONFIG_CRYPTO_DEV_OMAP_AES=m
++CONFIG_CRYPTO_DEV_OMAP_DES=m
+ CONFIG_CRC_CCITT=y
+ CONFIG_CRC_T10DIF=y
+ CONFIG_CRC_ITU_T=y
+ CONFIG_CRC7=y
+ CONFIG_LIBCRC32C=y
++CONFIG_DMA_CMA=y
+ CONFIG_FONTS=y
+ CONFIG_FONT_8x8=y
+ CONFIG_FONT_8x16=y
+@@ -552,6 +560,5 @@ CONFIG_DEBUG_INFO=y
+ CONFIG_DEBUG_INFO_SPLIT=y
+ CONFIG_DEBUG_INFO_DWARF4=y
+ CONFIG_MAGIC_SYSRQ=y
+-CONFIG_DEBUG_FS=y
+ CONFIG_SCHEDSTATS=y
+ # CONFIG_DEBUG_BUGVERBOSE is not set
+diff --git a/drivers/cpufreq/cpufreq-dt-platdev.c b/drivers/cpufreq/cpufreq-dt-platdev.c
+index bca8d1f47fd2..54bc76743b1f 100644
+--- a/drivers/cpufreq/cpufreq-dt-platdev.c
++++ b/drivers/cpufreq/cpufreq-dt-platdev.c
+@@ -86,7 +86,6 @@ static const struct of_device_id whitelist[] __initconst = {
+ 	{ .compatible = "st-ericsson,u9540", },
+ 
+ 	{ .compatible = "ti,omap2", },
+-	{ .compatible = "ti,omap3", },
+ 	{ .compatible = "ti,omap4", },
+ 	{ .compatible = "ti,omap5", },
+ 
+@@ -137,6 +136,7 @@ static const struct of_device_id blacklist[] __initconst = {
+ 	{ .compatible = "ti,am33xx", },
+ 	{ .compatible = "ti,am43", },
+ 	{ .compatible = "ti,dra7", },
++	{ .compatible = "ti,omap3", },
+ 
+ 	{ }
+ };
+diff --git a/drivers/cpufreq/ti-cpufreq.c b/drivers/cpufreq/ti-cpufreq.c
+index aeaa883a8c9d..557cb513bf7f 100644
+--- a/drivers/cpufreq/ti-cpufreq.c
++++ b/drivers/cpufreq/ti-cpufreq.c
+@@ -31,11 +31,17 @@
+ #define DRA7_EFUSE_OD_MPU_OPP			BIT(1)
+ #define DRA7_EFUSE_HIGH_MPU_OPP			BIT(2)
+ 
++#define OMAP3_CONTROL_DEVICE_STATUS		0x4800244C
++#define OMAP3_CONTROL_IDCODE			0x4830A204
++#define OMAP34xx_ProdID_SKUID			0x4830A20C
++#define OMAP3_SYSCON_BASE	(0x48000000 + 0x2000 + 0x270)
++
+ #define VERSION_COUNT				2
+ 
+ struct ti_cpufreq_data;
+ 
+ struct ti_cpufreq_soc_data {
++	const char * const *reg_names;
+ 	unsigned long (*efuse_xlate)(struct ti_cpufreq_data *opp_data,
+ 				     unsigned long efuse);
+ 	unsigned long efuse_fallback;
+@@ -85,6 +91,13 @@ static unsigned long dra7_efuse_xlate(struct ti_cpufreq_data *opp_data,
+ 	return calculated_efuse;
+ }
+ 
++static unsigned long omap3_efuse_xlate(struct ti_cpufreq_data *opp_data,
++				      unsigned long efuse)
++{
++	/* OPP enable bit ("Speed Binned") */
++	return BIT(efuse);
++}
++
+ static struct ti_cpufreq_soc_data am3x_soc_data = {
+ 	.efuse_xlate = amx3_efuse_xlate,
+ 	.efuse_fallback = AM33XX_800M_ARM_MPU_MAX_FREQ,
+@@ -112,6 +125,74 @@ static struct ti_cpufreq_soc_data dra7_soc_data = {
+ 	.multi_regulator = true,
+ };
+ 
++/*
++ * OMAP35x TRM (SPRUF98K):
++ *  CONTROL_IDCODE (0x4830 A204) describes Silicon revisions.
++ *  Control OMAP Status Register 15:0 (Address 0x4800 244C)
++ *    to separate between omap3503, omap3515, omap3525, omap3530
++ *    and feature presence.
++ *    There are encodings for versions limited to 400/266MHz
++ *    but we ignore.
++ *    Not clear if this also holds for omap34xx.
++ *  some eFuse values e.g. CONTROL_FUSE_OPP1_VDD1
++ *    are stored in the SYSCON register range
++ *  Register 0x4830A20C [ProdID.SKUID] [0:3]
++ *    0x0 for normal 600/430MHz device.
++ *    0x8 for 720/520MHz device.
++ *    Not clear what omap34xx value is.
++ */
++
++static struct ti_cpufreq_soc_data omap34xx_soc_data = {
++	.efuse_xlate = omap3_efuse_xlate,
++	.efuse_offset = OMAP34xx_ProdID_SKUID - OMAP3_SYSCON_BASE,
++	.efuse_shift = 3,
++	.efuse_mask = BIT(3),
++	.rev_offset = OMAP3_CONTROL_IDCODE - OMAP3_SYSCON_BASE,
++	.multi_regulator = false,
++};
++
++/*
++ * AM/DM37x TRM (SPRUGN4M)
++ *  CONTROL_IDCODE (0x4830 A204) describes Silicon revisions.
++ *  Control Device Status Register 15:0 (Address 0x4800 244C)
++ *    to separate between am3703, am3715, dm3725, dm3730
++ *    and feature presence.
++ *   Speed Binned = Bit 9
++ *     0 800/600 MHz
++ *     1 1000/800 MHz
++ *  some eFuse values e.g. CONTROL_FUSE_OPP 1G_VDD1
++ *    are stored in the SYSCON register range.
++ *  There is no 0x4830A20C [ProdID.SKUID] register (exists but
++ *    seems to always read as 0).
++ */
++
++static const char * const omap3_reg_names[] = {"cpu0", "vbb"};
++
++static struct ti_cpufreq_soc_data omap36xx_soc_data = {
++	.reg_names = omap3_reg_names,
++	.efuse_xlate = omap3_efuse_xlate,
++	.efuse_offset = OMAP3_CONTROL_DEVICE_STATUS - OMAP3_SYSCON_BASE,
++	.efuse_shift = 9,
++	.efuse_mask = BIT(9),
++	.rev_offset = OMAP3_CONTROL_IDCODE - OMAP3_SYSCON_BASE,
++	.multi_regulator = true,
++};
++
++/*
++ * AM3517 is quite similar to AM/DM37x except that it has no
++ * high speed grade eFuse and no abb ldo
++ */
++
++static struct ti_cpufreq_soc_data am3517_soc_data = {
++	.efuse_xlate = omap3_efuse_xlate,
++	.efuse_offset = OMAP3_CONTROL_DEVICE_STATUS - OMAP3_SYSCON_BASE,
++	.efuse_shift = 0,
++	.efuse_mask = 0,
++	.rev_offset = OMAP3_CONTROL_IDCODE - OMAP3_SYSCON_BASE,
++	.multi_regulator = false,
++};
++
++
+ /**
+  * ti_cpufreq_get_efuse() - Parse and return efuse value present on SoC
+  * @opp_data: pointer to ti_cpufreq_data context
+@@ -128,7 +209,17 @@ static int ti_cpufreq_get_efuse(struct ti_cpufreq_data *opp_data,
+ 
+ 	ret = regmap_read(opp_data->syscon, opp_data->soc_data->efuse_offset,
+ 			  &efuse);
+-	if (ret) {
++	if (ret == -EIO) {
++		/* not a syscon register! */
++		void __iomem *regs = ioremap(OMAP3_SYSCON_BASE +
++				opp_data->soc_data->efuse_offset, 4);
++
++		if (!regs)
++			return -ENOMEM;
++		efuse = readl(regs);
++		iounmap(regs);
++		}
++	else if (ret) {
+ 		dev_err(dev,
+ 			"Failed to read the efuse value from syscon: %d\n",
+ 			ret);
+@@ -159,7 +250,17 @@ static int ti_cpufreq_get_rev(struct ti_cpufreq_data *opp_data,
+ 
+ 	ret = regmap_read(opp_data->syscon, opp_data->soc_data->rev_offset,
+ 			  &revision);
+-	if (ret) {
++	if (ret == -EIO) {
++		/* not a syscon register! */
++		void __iomem *regs = ioremap(OMAP3_SYSCON_BASE +
++				opp_data->soc_data->rev_offset, 4);
++
++		if (!regs)
++			return -ENOMEM;
++		revision = readl(regs);
++		iounmap(regs);
++		}
++	else if (ret) {
+ 		dev_err(dev,
+ 			"Failed to read the revision number from syscon: %d\n",
+ 			ret);
+@@ -189,8 +290,14 @@ static int ti_cpufreq_setup_syscon_register(struct ti_cpufreq_data *opp_data)
+ 
+ static const struct of_device_id ti_cpufreq_of_match[] = {
+ 	{ .compatible = "ti,am33xx", .data = &am3x_soc_data, },
++	{ .compatible = "ti,am3517", .data = &am3517_soc_data, },
+ 	{ .compatible = "ti,am43", .data = &am4x_soc_data, },
+ 	{ .compatible = "ti,dra7", .data = &dra7_soc_data },
++	{ .compatible = "ti,omap34xx", .data = &omap34xx_soc_data, },
++	{ .compatible = "ti,omap36xx", .data = &omap36xx_soc_data, },
++	/* legacy */
++	{ .compatible = "ti,omap3430", .data = &omap34xx_soc_data, },
++	{ .compatible = "ti,omap3630", .data = &omap36xx_soc_data, },
+ 	{},
+ };
+ 
+@@ -212,7 +319,7 @@ static int ti_cpufreq_probe(struct platform_device *pdev)
+ 	const struct of_device_id *match;
+ 	struct opp_table *ti_opp_table;
+ 	struct ti_cpufreq_data *opp_data;
+-	const char * const reg_names[] = {"vdd", "vbb"};
++	const char * const default_reg_names[] = {"vdd", "vbb"};
+ 	int ret;
+ 
+ 	match = dev_get_platdata(&pdev->dev);
+@@ -268,9 +375,13 @@ static int ti_cpufreq_probe(struct platform_device *pdev)
+ 	opp_data->opp_table = ti_opp_table;
+ 
+ 	if (opp_data->soc_data->multi_regulator) {
++		const char * const *reg_names = default_reg_names;
++
++		if (opp_data->soc_data->reg_names)
++			reg_names = opp_data->soc_data->reg_names;
+ 		ti_opp_table = dev_pm_opp_set_regulators(opp_data->cpu_dev,
+ 							 reg_names,
+-							 ARRAY_SIZE(reg_names));
++							 ARRAY_SIZE(default_reg_names));
+ 		if (IS_ERR(ti_opp_table)) {
+ 			dev_pm_opp_put_supported_hw(opp_data->opp_table);
+ 			ret =  PTR_ERR(ti_opp_table);
+diff --git a/drivers/media/i2c/mt9p031.c b/drivers/media/i2c/mt9p031.c
+index dc23b9ed510a..13e60ccb781e 100644
+--- a/drivers/media/i2c/mt9p031.c
++++ b/drivers/media/i2c/mt9p031.c
+@@ -954,7 +954,7 @@ static int mt9p031_open(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
+ 	if (mt9p031->model == MT9P031_MODEL_MONOCHROME)
+ 		format->code = MEDIA_BUS_FMT_Y12_1X12;
+ 	else
+-		format->code = MEDIA_BUS_FMT_SGRBG12_1X12;
++		format->code = MEDIA_BUS_FMT_SGRBG8_1X8;
+ 
+ 	format->width = MT9P031_WINDOW_WIDTH_DEF;
+ 	format->height = MT9P031_WINDOW_HEIGHT_DEF;
+@@ -1124,7 +1124,7 @@ static int mt9p031_probe(struct i2c_client *client,
+ 	if (mt9p031->model == MT9P031_MODEL_MONOCHROME)
+ 		mt9p031->format.code = MEDIA_BUS_FMT_Y12_1X12;
+ 	else
+-		mt9p031->format.code = MEDIA_BUS_FMT_SGRBG12_1X12;
++		mt9p031->format.code = MEDIA_BUS_FMT_SGRBG8_1X8;
+ 
+ 	mt9p031->format.width = MT9P031_WINDOW_WIDTH_DEF;
+ 	mt9p031->format.height = MT9P031_WINDOW_HEIGHT_DEF;
+diff --git a/drivers/media/platform/omap3isp/ispvideo.c b/drivers/media/platform/omap3isp/ispvideo.c
+index ee183c35ff3b..9541fe6700d0 100644
+--- a/drivers/media/platform/omap3isp/ispvideo.c
++++ b/drivers/media/platform/omap3isp/ispvideo.c
+@@ -662,6 +662,33 @@ isp_video_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
+ 	return 0;
+ }
+ 
++static int
++isp_video_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *fmtdesc)
++{
++    struct isp_video_fh *vfh = to_isp_video_fh(fh);
++    struct isp_video *video = video_drvdata(file);
++
++    if (fmtdesc->index)
++    {
++        return -EINVAL;
++    }
++
++    if (fmtdesc->type != video->type)
++    {
++        return -EINVAL;
++    }
++
++    // trying to produce direct output in VYVY format. Hardcoded.
++    fmtdesc->flags = 0;
++    fmtdesc->description[0] = 'U';
++    fmtdesc->description[1] = 'Y';
++    fmtdesc->description[2] = 'V';
++    fmtdesc->description[3] = 'Y';
++    fmtdesc->description[4] = '0';
++    fmtdesc->pixelformat = V4L2_PIX_FMT_UYVY;
++
++    return 0;
++}
+ static int
+ isp_video_get_format(struct file *file, void *fh, struct v4l2_format *format)
+ {
+@@ -1264,8 +1291,17 @@ isp_video_s_input(struct file *file, void *fh, unsigned int input)
+ 	return input == 0 ? 0 : -EINVAL;
+ }
+ 
++static int
++isp_video_queryctrl(struct file *file, void *fh, struct v4l2_queryctrl *queryctrl)
++{
++    if (queryctrl->id < V4L2_CID_BASE)
++        return -EDOM;
++
++    return -EINVAL;
++}
+ static const struct v4l2_ioctl_ops isp_video_ioctl_ops = {
+ 	.vidioc_querycap		= isp_video_querycap,
++	.vidioc_enum_fmt_vid_cap    = isp_video_enum_format,
+ 	.vidioc_g_fmt_vid_cap		= isp_video_get_format,
+ 	.vidioc_s_fmt_vid_cap		= isp_video_set_format,
+ 	.vidioc_try_fmt_vid_cap		= isp_video_try_format,
+@@ -1285,6 +1321,7 @@ static const struct v4l2_ioctl_ops isp_video_ioctl_ops = {
+ 	.vidioc_enum_input		= isp_video_enum_input,
+ 	.vidioc_g_input			= isp_video_g_input,
+ 	.vidioc_s_input			= isp_video_s_input,
++	.vidioc_queryctrl        = isp_video_queryctrl,
+ };
+ 
+ /* -----------------------------------------------------------------------------
+diff --git a/drivers/misc/eeprom/Kconfig b/drivers/misc/eeprom/Kconfig
+index 0f791bfdc1f5..f19f324ad172 100644
+--- a/drivers/misc/eeprom/Kconfig
++++ b/drivers/misc/eeprom/Kconfig
+@@ -31,6 +31,15 @@ config EEPROM_AT24
+ 	  This driver can also be built as a module.  If so, the module
+ 	  will be called at24.
+ 
++config LPD_EEPROM
++	tristate "Beacon EmbeddedWorks MFG EEPROM Decoder"
++	depends on EEPROM_AT24
++	help
++	  Enable this driver to extract MFG EEPROM information like:
++	  dr_timings       part_number       version_code                                                                                                      
++	  lan_macaddr       serial_number     wifi_config_data                                                                                                  
++	  model_name        speed_mhz         wifi_macaddr 
++ 
+ config EEPROM_AT25
+ 	tristate "SPI EEPROMs from most vendors"
+ 	depends on SPI && SYSFS
+diff --git a/drivers/misc/eeprom/Makefile b/drivers/misc/eeprom/Makefile
+index a9b4b6579b75..639e2dcd1bb4 100644
+--- a/drivers/misc/eeprom/Makefile
++++ b/drivers/misc/eeprom/Makefile
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ obj-$(CONFIG_EEPROM_AT24)	+= at24.o
++obj-$(CONFIG_LPD_EEPROM)	+= beacon-productid.o
+ obj-$(CONFIG_EEPROM_AT25)	+= at25.o
+ obj-$(CONFIG_EEPROM_LEGACY)	+= eeprom.o
+ obj-$(CONFIG_EEPROM_MAX6875)	+= max6875.o
+diff --git a/drivers/misc/eeprom/beacon-productid.c b/drivers/misc/eeprom/beacon-productid.c
+new file mode 100644
+index 000000000000..62f7054eac6c
+--- /dev/null
++++ b/drivers/misc/eeprom/beacon-productid.c
+@@ -0,0 +1,1484 @@
++/*
++ * logicpd-new-product-id
++ *
++ * Copyright (C) 2017 Logic Product Development, Inc.
++ * Adam Ford <adam.ford@logicpd.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/init.h>
++#include <linux/module.h>
++#include <linux/device.h>
++#include <linux/syscalls.h>
++#include <linux/fcntl.h>
++#include <linux/fs.h>
++#include <linux/slab.h>
++#include <asm/uaccess.h>   // Needed by segment descriptors
++
++#define EEPROM_PATH "/sys/devices/platform/68000000.ocp/48060000.i2c/i2c-2/2-0050/eeprom"
++
++unsigned char *id_data_buf;
++
++// This is for debugging purposes only. Set to zero to deactivate.
++#define SPOOF_VERSION_CODE 0
++
++#ifdef DEBUG
++#define DPRINTF(fmt, args...) printk(KERN_DBG fmt, ## args)
++#else
++#define DPRINTF(fmt, ...)
++#endif
++
++#undef ID_KEY_STRINGS
++#define ID_KEY_ENUMS
++
++#undef ID_KEY_START
++#undef ID_KEY_ENTRY
++#undef ID_KEY_END
++
++#if defined(ID_KEY_STRINGS)
++/* This is the usage to build the keys for the compiler; we define
++ * an array of strings whose index is the value */
++#define ID_KEY_START static char *id_keys[] = {
++#define ID_KEY_ENTRY(XX) #XX,
++#define ID_KEY_END };
++#elif defined(ID_KEY_ENUMS)
++/* This is the usage by people using the library to access the data */
++#define ID_KEY_START typedef enum {
++#define ID_KEY_ENTRY(XX) ID_KEY_ ## XX,
++#define ID_KEY_END } id_keys_t;
++#else
++#error "Need either ID_KEY_INTERFACE or ID_KEY_COMPILER defined!"
++#endif
++
++/* There are some implied conventions here: */
++/* - names of keys that contain other keys (dictionaries) end in "_group" */
++/* - names of keys that provide a register setting end in "_reg"          */
++/* - any keys that specify a unit of measure, include units in the name (ie. _mhz, _degf, _bytes) */
++
++ID_KEY_START
++
++/* Manufacturing unique data for each SOM */
++ID_KEY_ENTRY(serialization_group)
++ID_KEY_ENTRY(serial_number)
++ID_KEY_ENTRY(wifi_ethaddr1)
++ID_KEY_ENTRY(wifi_ethaddr2)
++ID_KEY_ENTRY(wifi_ethaddr3)
++ID_KEY_ENTRY(wifi_ethaddr4)
++ID_KEY_ENTRY(nvs)
++
++/* BOM Model number information */
++ID_KEY_ENTRY(model_group)
++ID_KEY_ENTRY(model_name)
++ID_KEY_ENTRY(part_number)
++ID_KEY_ENTRY(version_code)
++ID_KEY_ENTRY(hardware_platform)
++
++/* CPU specific information */
++ID_KEY_ENTRY(cpu0_group)
++ID_KEY_ENTRY(type)
++ID_KEY_ENTRY(number)
++ID_KEY_ENTRY(speed_mhz)
++ID_KEY_ENTRY(temp_class)
++
++/* CPU bus information */
++ID_KEY_ENTRY(cpu0_bus_group)
++
++/* DRAM bus information */
++ID_KEY_ENTRY(dram_bus_group)
++ID_KEY_ENTRY(sysconfig_reg)
++ID_KEY_ENTRY(sharing_reg)
++ID_KEY_ENTRY(dlla_ctrl_reg)
++ID_KEY_ENTRY(cs_cfg_reg)
++// ID_KEY_ENTRY(cs0_group) Used in the dram_bus_group, but key defined below after local_bus_group
++// ID_KEY_ENTRY(cs1_group) Used in the dram_bus_group, but key defined below after local_bus_group
++ID_KEY_ENTRY(mcfg_reg)
++ID_KEY_ENTRY(mr_reg)
++ID_KEY_ENTRY(rfr_ctrl_reg)
++ID_KEY_ENTRY(emr2_reg)
++ID_KEY_ENTRY(actim_ctrla_reg)
++ID_KEY_ENTRY(actim_ctrlb_reg)
++ID_KEY_ENTRY(power_reg)
++
++/* GPMC keys */
++ID_KEY_ENTRY(local_bus_group)
++ID_KEY_ENTRY(cs0_group)
++ID_KEY_ENTRY(cs1_group)
++ID_KEY_ENTRY(cs2_group)
++ID_KEY_ENTRY(cs3_group)
++ID_KEY_ENTRY(cs4_group)
++ID_KEY_ENTRY(cs5_group)
++ID_KEY_ENTRY(cs6_group)
++ID_KEY_ENTRY(config1_reg)
++ID_KEY_ENTRY(config2_reg)
++ID_KEY_ENTRY(config3_reg)
++ID_KEY_ENTRY(config4_reg)
++ID_KEY_ENTRY(config5_reg)
++ID_KEY_ENTRY(config6_reg)
++ID_KEY_ENTRY(config7_reg)
++
++/* Manufacturing unique data for each SOM */
++ID_KEY_ENTRY(lan_ethaddr1)
++ID_KEY_ENTRY(lan_ethaddr2)
++ID_KEY_ENTRY(lan_ethaddr3)
++ID_KEY_ENTRY(lan_ethaddr4)
++
++/* End of keys */
++ID_KEY_END
++
++typedef enum {
++	/* Number */
++	IDENUM_NEG_NUM = 0,
++	IDENUM_POS_NUM,
++
++	/* String/Hex String */
++	IDENUM_STR,
++	IDENUM_HEXSTR,
++
++	/* Array */
++	IDENUM_ARRAY,
++
++	/* Dictionary */
++	IDENUM_DICT,
++
++	/* Key */
++	IDENUM_KEY,
++
++	/* Any string */
++	IDENUM_ANY_STRING,
++
++	/* Any number */
++	IDENUM_ANY_NUMBER,
++
++} idenum_t;
++
++/* structure of builtin keys */
++struct id_key {
++	unsigned char *ptr;
++	unsigned int size;
++};
++
++#define ID_EOK		0	/* Okay */
++#define ID_ENOENT	2	/* No such key */
++#define ID_ENOMEM	12	/* Out of memory */
++#define ID_EACCES	13	/* Permission denied */
++#define ID_ENODEV	19	/* No such device */
++#define ID_EINVAL	22	/* Invalid arcument */
++#define ID_EDOM		33	/* argument out of domain of func */
++#define ID_ERANGE	34	/* Out of range */
++#define	ID_EL2NSYNC	45	/* Level 2 not synchronized */
++#define	ID_ENOMEDIUM	123	/* No medium found */
++
++/*
++ * return a byte from the ID data at offset 'offset' and set *oor to zero
++ * if offset is in range of the device.  If offset is out of range then
++ * set *oor to non-zero
++ */
++
++static unsigned char id_fetch_byte(int offset, int *oor)
++{
++	unsigned char *p = (unsigned char *)&id_data_buf[0];
++
++	if (offset < (32<<10)) {
++		*oor = ID_EOK;
++		return p[offset];
++	}
++
++	*oor = -ID_ERANGE;
++	return 0;
++}
++
++struct id_data {
++	unsigned int root_size;
++	unsigned int root_offset;
++};
++
++/* Function to do the initial startup (i.e. figure out how much data, offset of
++ * key table, etc */
++static int id_startup(struct id_data *data);
++/*
++ * Functions provided back to callers for use in accessing data
++ */
++
++/* ID data "cookie" used to access data; ultimately this will be opaque
++ * to the callers as they don't need to know whats in it, just pass it around
++ */
++struct id_cookie {
++	unsigned int start_offset;	/* start offset from beginning of data */
++	unsigned int size;		/* size of data in bytes */
++	unsigned int offset;		/* current read offset */
++};
++
++/* Initialize the cookie to cover the whole root dictionary */
++static int id_init_cookie(struct id_data *data, struct id_cookie *cookie);
++
++/* What is the read pointer cookie is pointing at */
++static int id_whatis(struct id_cookie *cookie, idenum_t *type);
++
++/* User interface functions */
++
++static int id_dict_find_key(struct id_cookie *cookie, id_keys_t key);
++static int id_find_dict(struct id_cookie *cookie, id_keys_t key, idenum_t type);
++static int id_find_string(struct id_cookie *cookie, id_keys_t key, unsigned char *str_ptr, unsigned int *str_size);
++static int id_find_number(struct id_cookie *cookie, id_keys_t key, int *num);
++static int id_find_numbers(struct id_cookie *cookie, id_keys_t *key, int key_size, int *nums);
++
++/*
++ * Extract an unsigned packed number, first byte is in 'pack_bits'
++ * of first byte, starting at offset 'offset' */
++static unsigned int extract_unsigned_pnum(struct id_cookie *cookie, int pack_bits, int *err);
++static int extract_signed_pnum(struct id_cookie *cookie, int pack_bits, int *err);
++
++
++
++#define ID_MAX_KEY_SIZE 32
++
++static int id_extract_size(struct id_cookie *cookie, int *err);
++
++/* struct id_data id_data; */
++
++struct __attribute__ ((packed)) id_header {
++	unsigned char signature[4];
++	unsigned char id_fmt_ver;
++	unsigned char unused0;
++	unsigned short data_length;
++} id_header;
++
++struct __attribute__ ((packed)) id_checksums {
++	unsigned short header;
++	unsigned short data;
++};
++
++/*
++ * Calculate a CRC-15 of a data buffer passed in
++ */
++
++void crc_15_step(unsigned short *crc, unsigned char byte)
++{
++	int i;
++	unsigned short crcnext;
++
++	for (i = 0; i < 7; ++i) {
++		crcnext = (byte & 1) ^ (*crc>>14);
++		*crc = (*crc << 1) & 0x7fff;
++		if (crcnext)
++			*crc ^= 0x4599;
++		byte >>= 1;
++	}
++}
++
++unsigned short crc_15(void *buf, int len)
++{
++	unsigned char *p = buf;
++	unsigned short xsum = 0;
++	int i;
++
++	for (i = 0; i < len; ++i) {
++		crc_15_step(&xsum, p[i]);
++	}
++	return xsum;
++}
++
++static int id_startup(struct id_data *data)
++{
++	int i, err;
++	struct id_cookie cookie;
++	unsigned char byte, *p;
++	char *header_tag = "LpId";
++	unsigned short xsum;
++	struct id_header hdr;
++	struct id_checksums xsums;
++
++	cookie.offset = 0;
++
++	/* Data starts with the header, should be 'LpId' */
++	for (i = 0; i < 4; ++i) {
++		byte = id_fetch_byte(cookie.offset, &err);
++		hdr.signature[i] = byte;
++		cookie.offset++;
++		if (err != ID_EOK) {
++			printk(KERN_DEBUG "%s[%u]\n", __FILE__, __LINE__);
++			goto err_ret;
++		}
++		if (hdr.signature[i] != header_tag[i]) {
++			printk(KERN_DEBUG "%s[%u]\n", __FILE__, __LINE__);
++			err = ID_ENODEV;
++			goto err_ret;
++		}
++	}
++
++	/* First LE 8-bit value is ID format version */
++	hdr.id_fmt_ver = id_fetch_byte(cookie.offset++, &err);
++
++	/* Second LE 8-bit value is currently not used */
++		hdr.unused0 = id_fetch_byte(cookie.offset++, &err);
++
++	/* Next LE 16-bit value is length of data */
++	hdr.data_length = id_fetch_byte(cookie.offset++, &err);
++	hdr.data_length |= (id_fetch_byte(cookie.offset++, &err) << 8);
++
++	/* Next LE 16-bit value is xsum of header */
++	xsums.header = id_fetch_byte(cookie.offset++, &err);
++	xsums.header |= (id_fetch_byte(cookie.offset++, &err) << 8);
++
++	/* Checksum the header */
++	xsum = crc_15(&hdr, sizeof(hdr));
++	p = (unsigned char *)&hdr;
++	//for (i = 0; i < sizeof(hdr); ++i)
++	//	crc_15_step(&xsum, p[i]);
++
++
++	if (xsum != xsums.header) {
++		printk(KERN_DEBUG "%s[%u] xsum: 0x%04x, xsums.header: 0x%04x\n",
++			__FILE__, __LINE__, xsum, xsums.header);
++		err = -ID_EL2NSYNC;
++		goto err_ret;
++	}
++
++	/* Next LE 16-bit value is xsum of data */
++	xsums.data = id_fetch_byte(cookie.offset++, &err);
++	xsums.data |= (id_fetch_byte(cookie.offset++, &err) << 8);
++
++
++	/* Checksum the data (next id_len bytes), must match xsums.data */
++	xsum = 0;
++	for (i = 0; i < hdr.data_length; ++i) {
++		byte = id_fetch_byte(cookie.offset + i, &err);
++
++		if (err != ID_EOK) {
++			printk(KERN_DEBUG "%s[%u]\n", __FILE__, __LINE__);
++			goto err_ret;
++		}
++		crc_15_step(&xsum, byte);
++	}
++	if (xsum != xsums.data) {
++		printk(KERN_DEBUG "%s[%u] xsum: 0x%04x, xsums.data: 0x%04x\n",
++			__FILE__, __LINE__, xsum, xsums.data);
++		err = -ID_EL2NSYNC;
++		goto err_ret;
++	}
++
++	/* offset is now at the first byte of the root dictionary which
++	   contains its span */
++	data->root_offset = cookie.offset;
++	data->root_size = extract_unsigned_pnum(&cookie, 5, &err);
++	if (err != ID_EOK) {
++		printk(KERN_DEBUG "%s[%u]\n", __FILE__, __LINE__);
++		goto err_ret;
++	}
++
++	data->root_size += cookie.offset - data->root_offset;
++
++	return ID_EOK;
++
++err_ret:
++	return err;
++}
++
++/*
++ * Reset the cookie to cover the whole root dictionary
++ */
++int id_init_cookie(struct id_data *data, struct id_cookie *cookie)
++{
++	if (!cookie)
++		return -ID_EINVAL;
++	cookie->start_offset = data->root_offset;
++	cookie->size = data->root_size;
++	cookie->offset = cookie->start_offset;
++	return ID_EOK;
++}
++
++unsigned int extract_unsigned_pnum(struct id_cookie *cookie, int start_bit, int *err)
++{
++	unsigned int value = 0;
++	unsigned int bit_offset = 0;
++	unsigned char bits;
++	unsigned char ch;
++	int oor;
++
++	*err = ID_EOK;
++	for (;;) {
++		ch = id_fetch_byte(cookie->offset++, &oor);
++		if (oor != ID_EOK) {
++			*err = oor;
++			printk(KERN_ERR "extract runs oor");
++			return 0;
++		}
++		if (ch & (1<<(start_bit-1))) {
++			/* more to go, accumulate bits */
++			bits = ch & ((1<<(start_bit - 1)) - 1);
++			value |= (bits << bit_offset);
++			bit_offset += start_bit-1;
++			start_bit = 8;
++		} else {
++			/* last byte of number */
++			bits = ch & ((1<<(start_bit - 1)) - 1);
++			value |= (bits << bit_offset);
++			break;
++		}
++	}
++	return value;
++}
++
++int extract_signed_pnum(struct id_cookie *cookie, int start_bit, int *err)
++{
++	int value = 0;
++	unsigned int bit_offset = 0;
++	unsigned char bits;
++	unsigned char ch;
++	int oor;
++
++	*err = ID_EOK;
++	for (;;) {
++		ch = id_fetch_byte(cookie->offset++, &oor);
++		if (oor != ID_EOK) {
++			*err = oor;
++			printk(KERN_ERR "extract runs oor");
++			return 0;
++		}
++		if (ch & (1<<(start_bit-1))) {
++			/* more to go, accumulate bits */
++			bits = ch & ((1<<(start_bit - 1)) - 1);
++			value |= (bits << bit_offset);
++			bit_offset += start_bit-1;
++			start_bit = 8;
++		} else {
++			/* last byte of number */
++			bits = ch & ((1<<(start_bit - 2)) - 1);
++			value |= (bits << bit_offset);
++			if (ch & (1<<(start_bit - 2)))
++				value = -value;
++			break;
++		}
++	}
++	return value;
++}
++
++int id_whatis(struct id_cookie *cookie, idenum_t *type)
++{
++	unsigned char byte;
++	int oor;
++
++	if (!cookie)
++		return -ID_EINVAL;
++
++	byte = id_fetch_byte(cookie->offset, &oor);
++	if (oor != ID_EOK)
++		return -ID_ERANGE;
++
++	byte >>= 5;
++	*type = (idenum_t)byte;
++
++	return ID_EOK;
++}
++
++int id_extract_size(struct id_cookie *cookie, int *err)
++{
++	idenum_t type;
++	struct id_cookie s_cookie;
++	int size;
++
++	s_cookie = *cookie;
++
++	*err = id_whatis(&s_cookie, &type);
++	if (*err != ID_EOK)
++		return *err;
++
++	switch (type) {
++	case IDENUM_DICT:
++		size = extract_unsigned_pnum(&s_cookie, 5, err);
++		size += (s_cookie.offset - cookie->offset);
++		break;
++	case IDENUM_ARRAY:
++		size = extract_unsigned_pnum(&s_cookie, 5, err);
++		size += (s_cookie.offset - cookie->offset);
++		break;
++	case IDENUM_STR:
++	case IDENUM_HEXSTR:
++		size = extract_unsigned_pnum(&s_cookie, 5, err);
++		size += (s_cookie.offset - cookie->offset);
++		break;
++	case IDENUM_POS_NUM:
++	case IDENUM_NEG_NUM:
++		extract_signed_pnum(&s_cookie, 5, err);
++		size = (s_cookie.offset - cookie->offset);
++		break;
++	case IDENUM_KEY:
++		extract_unsigned_pnum(&s_cookie, 5, err);
++		size = (s_cookie.offset - cookie->offset);
++		break;
++	default:
++		*err = -ID_EDOM;
++		size = 0;
++		break;
++	}
++	if (*err != ID_EOK)
++		return *err;
++
++	return size;
++}
++
++static int id_extract_key(struct id_cookie *cookie, id_keys_t *key)
++{
++	int err;
++	id_keys_t keyval;
++
++	keyval = (id_keys_t)extract_unsigned_pnum(cookie, 5, &err);
++	if (err != ID_EOK)
++		return err;
++	*key = keyval;
++	return ID_EOK;
++}
++
++/* in dictionary that cookie points to find key "key"; if found
++ * update cookie to associated "key" entry and return ID_EOK;
++ * else return -ID_ENOENT */
++static int id_dict_find_key(struct id_cookie *cookie, id_keys_t key)
++{
++	int err;
++	unsigned int size;
++	id_keys_t d_key;
++	idenum_t type;
++	struct id_cookie d_cookie = *cookie;
++	struct id_cookie t_cookie;
++
++	err = id_whatis(cookie, &type);
++	if (err != ID_EOK)
++		return err;
++
++	/* Header has to be a dictionary */
++	if (type != IDENUM_DICT)
++		return -ID_EINVAL;
++
++	/* Extract size of dictionary */
++	size = extract_unsigned_pnum(&d_cookie, 5, &err);
++	if (err != ID_EOK)
++		return err;
++
++	d_cookie.size = size;
++	d_cookie.start_offset = d_cookie.offset;
++
++	/* cookie->offset is now at first key */
++	while (d_cookie.offset < d_cookie.start_offset + d_cookie.size) {
++		/* Extract the key and move the cookie over key */
++		err = id_extract_key(&d_cookie, &d_key);
++		if (err != ID_EOK)
++			return err;
++		t_cookie = d_cookie;
++		/* move forward over the value */
++		size = id_extract_size(&d_cookie, &err);
++		if (err != ID_EOK)
++			return err;
++		if (key == d_key) {
++			d_cookie.size = size;
++			d_cookie.start_offset = t_cookie.offset;
++			d_cookie.offset = t_cookie.offset;
++			*cookie = d_cookie;
++			return ID_EOK;
++		}
++		d_cookie.offset += size;
++	}
++	return -ID_ENOENT;
++}
++
++/* Are these two types a match? */
++static int id_match_type(idenum_t type_a, idenum_t type_b)
++{
++	idenum_t tmp;
++
++	if (type_a == type_b)
++		return 1;
++
++	/* Oder the types (so the "*ANY*" types are in type_b) */
++	if ((int)type_a > (int)type_b) {
++		tmp = type_a;
++		type_a = type_b;
++		type_b = tmp;
++	}
++	if (type_b == IDENUM_ANY_STRING && (type_a == IDENUM_STR || type_a == IDENUM_HEXSTR))
++		return 1;
++
++	if (type_b == IDENUM_ANY_NUMBER && (type_a == IDENUM_NEG_NUM || type_a == IDENUM_POS_NUM))
++		return 1;
++
++	return 0;
++}
++
++/* Find in dictionary (that cookie points to) key "key" that is type "type" */
++static int id_find_dict(struct id_cookie *cookie, id_keys_t key, idenum_t type)
++{
++	int err;
++	struct id_cookie d_cookie = *cookie;
++	idenum_t l_type;
++
++	err = id_dict_find_key(&d_cookie, key);
++	if (err != ID_EOK)
++		return err;
++	err = id_whatis(&d_cookie, &l_type);
++	if (err != ID_EOK)
++		return err;
++	if (!id_match_type(l_type, type))
++		return -ID_EINVAL;
++	*cookie = d_cookie;
++	return ID_EOK;
++}
++
++/* in dictionary pointed at by cookie, find the key "key"; verify its a
++ * string and copy its value */
++static int id_find_string(struct id_cookie *cookie, id_keys_t key, unsigned char *str_ptr, unsigned int *str_size)
++{
++	int err, i;
++	unsigned char byte;
++	unsigned int size;
++	struct id_cookie d_cookie = *cookie;
++
++	err = id_find_dict(&d_cookie, key, IDENUM_ANY_STRING);
++
++	if (err != ID_EOK)
++		return err;
++	/* Extract the string size */
++	size = extract_unsigned_pnum(&d_cookie, 5, &err);
++	if (err != ID_EOK)
++		return err;
++
++	/* If handed a NULL str_ptr, only set the size and return */
++	if (!str_ptr) {
++		*str_size = size;
++		return ID_EOK;
++	}
++
++	if (size > *str_size)
++		return -ID_ERANGE;
++
++	for (i = 0; i < size; ++i) {
++		byte = id_fetch_byte(d_cookie.offset++, &err);
++		if (err)
++			return err;
++		str_ptr[i] = byte;
++	}
++	*str_size = size;
++
++	return ID_EOK;
++}
++
++/* in dictionary pointed at by cookie, find the key "key"; verify its a
++ * number (either pos/neg) and return its value through *num */
++static int id_find_number(struct id_cookie *cookie, id_keys_t key, int *num)
++{
++	int err;
++	int l_num;
++	idenum_t l_type;
++	struct id_cookie d_cookie = *cookie;
++
++	err = id_find_dict(&d_cookie, key, IDENUM_ANY_NUMBER);
++
++	if (err != ID_EOK)
++		return err;
++	err = id_whatis(&d_cookie, &l_type);
++	if (err != ID_EOK)
++		return err;
++	/* Extract the number size */
++#if SPOOF_VERSION_CODE
++	if ((cookie->offset == 509) && (key == ID_KEY_version_code)) {
++		*num = SPOOF_VERSION_CODE;
++		return ID_EOK;
++	}
++#endif
++	l_num = extract_unsigned_pnum(&d_cookie, 5, &err);
++	if (err != ID_EOK)
++		return err;
++
++	if (l_type == IDENUM_NEG_NUM)
++		l_num = -l_num;
++
++	*num = l_num;
++	return ID_EOK;
++}
++
++/* in dictionary pointed at by cookie, find the list of keys; verify they are
++ * numbers (either pos/neg) and return their value through *nums */
++static int id_find_numbers(struct id_cookie *cookie, id_keys_t *keys, int key_size, int *nums)
++{
++	int i, err;
++	struct id_cookie d_cookie;
++
++	for (i = 0; i < key_size; ++i) {
++		d_cookie = *cookie;
++		err = id_find_number(&d_cookie, keys[i], &nums[i]);
++		if (err != ID_EOK)
++			return err;
++	}
++	return ID_EOK;
++}
++
++/* --------------------------------------------------------- */
++
++/*
++ * Here down is the code to interface to the kernel to extract product
++ * ID information from the SRAM/AT24 chip.
++ */
++
++struct id_data id_data;
++static int found_id_data;
++static struct id_cookie cpu0_group_cookie;
++static struct id_cookie serialization_group_cookie;
++static struct id_cookie model_group_cookie;
++
++static int omap3logic_find_model_group_cookie(struct id_cookie *mg_cookie)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	if (!found_id_data) {
++		return -1;
++	}
++
++	if (model_group_cookie.offset) {
++		*mg_cookie = model_group_cookie;
++		return ID_EOK;
++	}
++
++	/* Reinitialise cookie back to the root */
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* find /model_group from root */
++	ret = id_find_dict(&cookie, ID_KEY_model_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	model_group_cookie = cookie;
++	*mg_cookie = cookie;
++	return ret;
++}
++
++static int omap3logic_find_serialization_cookie(struct id_cookie *s_cookie)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	if (!found_id_data) {
++		return -1;
++	}
++
++	if (serialization_group_cookie.offset) {
++		*s_cookie = serialization_group_cookie;
++		return ID_EOK;
++	}
++
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* find /serialization_group from root */
++	ret = id_find_dict(&cookie, ID_KEY_serialization_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	serialization_group_cookie = cookie;
++	*s_cookie = cookie;
++	return ID_EOK;
++}
++
++static int omap3logic_find_cpu0_group_cookie(struct id_cookie *s_cookie)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	if (!found_id_data) {
++		return -1;
++	}
++
++	if (cpu0_group_cookie.offset) {
++		*s_cookie = cpu0_group_cookie;
++		return ID_EOK;
++	}
++
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* find /cpu0_group from root */
++	ret = id_find_dict(&cookie, ID_KEY_cpu0_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	cpu0_group_cookie = cookie;
++	*s_cookie = cookie;
++	return ID_EOK;
++}
++
++int omap3logic_extract_new_part_number(u32 *part_number)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_model_group_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* Find part number */
++	ret = id_find_number(&cookie, ID_KEY_part_number, part_number);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++	return ret;
++}
++
++int omap3logic_extract_new_version_code(u32 *version_code)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_model_group_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return -EINVAL;
++	}
++
++	/* Find part number */
++	ret = id_find_number(&cookie, ID_KEY_version_code, version_code);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return -EINVAL;
++	}
++	return ret;
++}
++
++int omap3logic_extract_new_speed_mhz(u32 *speed_mhz)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_cpu0_group_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* Find part number */
++	ret = id_find_number(&cookie, ID_KEY_speed_mhz, speed_mhz);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++	return ret;
++}
++
++struct ddr_timings {
++	u32 sysconfig;
++	u32 sharing;
++	u32 power;
++	u32 cfg;
++	struct ddr_cs {
++		u32 mcfg;
++		u32 mr;
++		u32 rfr;
++		u32 emr;
++		u32 actima;
++		u32 actimb;
++		u32 dlla;
++	} cs;
++} ddr_timings;
++
++id_keys_t dram_cs_group_keys[] = {
++	ID_KEY_mcfg_reg,
++	ID_KEY_mr_reg,
++	ID_KEY_rfr_ctrl_reg,
++	ID_KEY_emr2_reg,
++	ID_KEY_actim_ctrla_reg,
++	ID_KEY_actim_ctrlb_reg,
++	ID_KEY_dlla_ctrl_reg,
++};
++id_keys_t dram_bus_group_keys[] = {
++	ID_KEY_sysconfig_reg,
++	ID_KEY_sharing_reg,
++	ID_KEY_power_reg,
++	ID_KEY_cs_cfg_reg,
++};
++
++int omap3logic_extract_new_ddr_timings(struct ddr_timings *ddr_timings)
++{
++	int ret;
++	struct id_cookie cookie, dram_bus_group_cookie;
++	int dram_bus_group_values[ARRAY_SIZE(dram_bus_group_keys)];
++	int dram_cs_group_values[ARRAY_SIZE(dram_cs_group_keys)];
++
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++
++	/* find /cpu0_bus_group from root */
++	ret = id_find_dict(&cookie, ID_KEY_cpu0_bus_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++
++	/* find /dram_bus_group from /cpu0_bus_group */
++	ret = id_find_dict(&cookie, ID_KEY_dram_bus_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++
++	dram_bus_group_cookie = cookie;
++	ret = id_find_numbers(&dram_bus_group_cookie, dram_bus_group_keys, ARRAY_SIZE(dram_bus_group_keys), dram_bus_group_values);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++
++	ddr_timings->sysconfig = dram_bus_group_values[0];
++	ddr_timings->sharing = dram_bus_group_values[1];
++	ddr_timings->power = dram_bus_group_values[2];
++	ddr_timings->cfg = dram_bus_group_values[3];
++
++	ret = id_find_dict(&dram_bus_group_cookie, ID_KEY_cs0_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++
++	ret = id_find_numbers(&dram_bus_group_cookie, dram_cs_group_keys, ARRAY_SIZE(dram_cs_group_keys), dram_cs_group_values);
++	if (ret != ID_EOK) {
++		return ret;
++	}
++	ddr_timings->cs.mcfg = dram_cs_group_values[0];
++	ddr_timings->cs.mr = dram_cs_group_values[1];
++	ddr_timings->cs.rfr = dram_cs_group_values[2];
++	ddr_timings->cs.emr = dram_cs_group_values[3];
++	ddr_timings->cs.actima = dram_cs_group_values[4];
++	ddr_timings->cs.actimb = dram_cs_group_values[5];
++	ddr_timings->cs.dlla = dram_cs_group_values[6];
++
++	return ret;
++}
++
++static int omap3logic_extract_new_model_name(char *model_name, u32 *model_name_size)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_model_group_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	ret = id_find_string(&cookie, ID_KEY_model_name, model_name, model_name_size);
++	if (ret != ID_EOK) {
++		if (ret != -ID_ENOENT) {
++			printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		}
++		return ret;
++	}
++
++	return ret;
++}
++
++int omap3logic_extract_new_serial_number(u8 *serial_number, u32 *serial_number_size)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_serialization_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* Find serial_number */
++	ret = id_find_string(&cookie, ID_KEY_serial_number, serial_number, serial_number_size);
++	if (ret != ID_EOK) {
++		if (ret != -ID_ENOENT)
++			printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	return ret;
++}
++
++int omap3logic_extract_new_nvs_data(u8 *nvs_data, u32 *nvs_data_size)
++{
++	int ret;
++	struct id_cookie cookie;
++
++	ret = omap3logic_find_serialization_cookie(&cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++
++	/* Find serial_number */
++	ret = id_find_string(&cookie, ID_KEY_nvs, nvs_data, nvs_data_size);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d ret %d\n", __func__, __LINE__, ret);
++		return ret;
++	}
++	return ret;
++}
++
++#if 0
++/* Extract GPMC timings for particular CS register */
++id_keys_t gpmc_ncs_keys[] = {
++	ID_KEY_cs0_group,
++	ID_KEY_cs1_group,
++	ID_KEY_cs2_group,
++	ID_KEY_cs3_group,
++	ID_KEY_cs4_group,
++	ID_KEY_cs5_group,
++	ID_KEY_cs6_group,
++};
++
++id_keys_t gpmc_config_reg_keys[] = {
++	ID_KEY_config1_reg,
++	ID_KEY_config2_reg,
++	ID_KEY_config3_reg,
++	ID_KEY_config4_reg,
++	ID_KEY_config5_reg,
++	ID_KEY_config6_reg,
++	ID_KEY_config7_reg,
++};
++
++#endif
++
++/* Initialize the product ID data and return 0 if found */
++static int product_id_init(void)
++{
++	int ret;
++
++	memset(&id_data, 0, sizeof(id_data));
++
++	ret = id_startup(&id_data);
++	if (ret != ID_EOK) {
++		return -1;
++	}
++
++	return 0;
++}
++
++static int logic_has_new_product_id(void)
++{
++	if (!found_id_data) {
++		if (!product_id_init()) {
++			found_id_data = 1;
++		}
++	}
++	return found_id_data;
++}
++
++static int omap3logic_init_new_product_id(void)
++{
++	if (!logic_has_new_product_id()) {
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		return -ENOENT;
++	}
++
++	return 0;
++}
++
++/* Extract the Wired LAN ethaddr, and return !0 if its valid */
++static int omap3logic_extract_new_lan_ethaddr(u8 *ethaddr)
++{
++	int ret;
++	struct id_cookie cookie;
++	int ethaddr_size;
++
++	if (!found_id_data) {
++		ret = -ENXIO;
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	/* Find /serialization_group */
++	ret = id_find_dict(&cookie, ID_KEY_serialization_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	/* Find /lan_ethaddr1 */
++	ethaddr_size = 6;
++	ret = id_find_string(&cookie, ID_KEY_lan_ethaddr1, ethaddr, &ethaddr_size);
++	if (ret != ID_EOK) {
++		goto done;
++	}
++	if (ethaddr_size != 6) {
++		ret = -E2BIG;
++		printk(KERN_ERR "%s:%d ethaddr_size %u\n", __func__, __LINE__, ethaddr_size);
++		goto done;
++	}
++	ret = 0;
++
++done:
++	return ret;
++}
++
++/* Extract the WiFi ethaddr, and return !0 if its valid */
++static int omap3logic_extract_new_wifi_ethaddr(u8 *ethaddr)
++{
++	int ret;
++	struct id_cookie cookie;
++	int ethaddr_size;
++
++	if (!found_id_data) {
++		ret = -ENXIO;
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	ret = id_init_cookie(&id_data, &cookie);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	/* Find /serialization_group */
++	ret = id_find_dict(&cookie, ID_KEY_serialization_group, IDENUM_DICT);
++	if (ret != ID_EOK) {
++		printk(KERN_ERR "%s:%d\n", __func__, __LINE__);
++		goto done;
++	}
++
++	/* Find /lan_ethaddr2 */
++	ethaddr_size = 6;
++	ret = id_find_string(&cookie, ID_KEY_wifi_ethaddr1, ethaddr, &ethaddr_size);
++	if (ret != ID_EOK) {
++		goto done;
++	}
++	if (ethaddr_size != 6) {
++		ret = -E2BIG;
++		printk(KERN_ERR "%s:%d ethadr_size %d\n", __func__, __LINE__, ethaddr_size);
++		goto done;
++	}
++
++	ret = 0;
++done:
++	return ret;
++}
++
++static ssize_t product_id_show_wifi_macaddr(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u8 macaddr[7];
++	int ret;
++	int len;
++
++	ret = omap3logic_extract_new_wifi_ethaddr(macaddr);
++	if (!ret) {
++		len = sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
++			macaddr[0], macaddr[1], macaddr[2],
++			macaddr[3], macaddr[4], macaddr[5]);
++	}
++	return len;
++}
++
++static ssize_t product_id_show_lan_macaddr(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u8 macaddr[7];
++	int ret;
++	int len;
++
++	ret = omap3logic_extract_new_lan_ethaddr(macaddr);
++	if (!ret) {
++		len = sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
++			macaddr[0], macaddr[1], macaddr[2],
++			macaddr[3], macaddr[4], macaddr[5]);
++	}
++	return len;
++}
++
++static ssize_t product_id_show_part_number(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u32 part_number;
++	int len;
++
++	omap3logic_extract_new_part_number(&part_number);
++	len = sprintf(buf, "%d\n", part_number);
++	return len;
++}
++
++static ssize_t product_id_show_model_name(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u32 model_name_size = 128;
++	int ret;
++
++	ret = omap3logic_extract_new_model_name((u8 *)buf, &model_name_size);
++
++	buf[model_name_size] = '\n';
++	return model_name_size + 1;
++}
++
++static ssize_t product_id_show_version_code(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u32 version_code;
++	int len;
++
++	omap3logic_extract_new_version_code(&version_code);
++	len = sprintf(buf, "%u\n", version_code);
++	return len;
++}
++
++static ssize_t product_id_show_serial_number(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u32 serial_number_size = 128;
++
++	omap3logic_extract_new_serial_number((u8 *)buf, &serial_number_size);
++	buf[serial_number_size] = '\n';
++	return serial_number_size + 1;
++}
++
++static ssize_t product_id_show_speed_mhz(struct class *clase, struct class_attribute *attr, char *buf)
++{
++	u32 speed_mhz;
++	int len;
++
++	omap3logic_extract_new_speed_mhz(&speed_mhz);
++	len = sprintf(buf, "%u\n", speed_mhz);
++	return len;
++}
++
++static ssize_t product_id_show_wifi_config_data(struct class *class, struct class_attribute *attr, char *buf)
++{
++	u32 wifi_config_size = PAGE_SIZE;
++	int ret;
++
++	ret = omap3logic_extract_new_nvs_data(buf, &wifi_config_size);
++
++	if (ret == ID_EOK)
++		return wifi_config_size;
++
++	return ret;
++}
++
++#define DUMP_DDR_TIMING(REG) i += sprintf(&buf[i], "%-9s: %08x\n", #REG, ddr_timings. REG)
++static ssize_t product_id_show_ddr_timings(struct class *class, struct class_attribute *attr, char *buf)
++{
++	int i = 0;
++
++	DUMP_DDR_TIMING(sysconfig);
++	DUMP_DDR_TIMING(sharing);
++	DUMP_DDR_TIMING(power);
++	DUMP_DDR_TIMING(cfg);
++	DUMP_DDR_TIMING(cs.mcfg);
++	DUMP_DDR_TIMING(cs.mr);
++	DUMP_DDR_TIMING(cs.rfr);
++	DUMP_DDR_TIMING(cs.emr);
++	DUMP_DDR_TIMING(cs.actima);
++	DUMP_DDR_TIMING(cs.actimb);
++	DUMP_DDR_TIMING(cs.dlla);
++
++	return i;
++}
++
++static struct {
++	struct class_attribute attr;
++	int *test_value;
++} product_id_class_attributes[] = {
++	{
++		__ATTR(lan_macaddr, 0444, product_id_show_lan_macaddr, NULL),
++		NULL,
++	},
++	{
++		__ATTR(wifi_macaddr, 0444, product_id_show_wifi_macaddr, NULL),
++		NULL,
++	},
++	{
++		__ATTR(part_number, 0444, product_id_show_part_number, NULL),
++		NULL,
++	},
++	{
++		__ATTR(version_code, 0444, product_id_show_version_code, NULL),
++		NULL,
++	},
++	{
++		__ATTR(model_name, 0444, product_id_show_model_name, NULL),
++		NULL,
++	},
++	{
++		__ATTR(serial_number, 0444, product_id_show_serial_number, NULL),
++		NULL,
++	},
++	{
++		__ATTR(speed_mhz, 0444, product_id_show_speed_mhz, NULL),
++		NULL,
++	},
++	{
++		__ATTR(wifi_config_data, 0444, product_id_show_wifi_config_data, NULL),
++		NULL,
++	},
++	{
++		__ATTR(ddr_timings, 0444, product_id_show_ddr_timings, NULL),
++		NULL,
++	},
++};
++
++static void product_id_dev_release(struct device *dev)
++{
++}
++
++static struct class product_id_class = {
++	.name = "product_id",
++	.dev_release = product_id_dev_release,
++};
++
++static int omap3logic_create_new_product_id_sysfs(void)
++{
++	int i, rc;
++
++	rc = class_register(&product_id_class);
++	if (rc != 0) {
++		printk(KERN_ERR "%s: failed to register product_id class\n", __func__);
++		return rc;
++	}
++
++	for (i = 0; i < ARRAY_SIZE(product_id_class_attributes); ++i) {
++		if (!product_id_class_attributes[i].test_value || *product_id_class_attributes[i].test_value) {
++			rc = class_create_file(&product_id_class, &product_id_class_attributes[i].attr);
++			if (unlikely(rc)) {
++				printk(KERN_ERR "%s: failed to create product_id class file\n", __func__);
++				while (--i >= 0) {
++					if (!product_id_class_attributes[i].test_value || *product_id_class_attributes[i].test_value) {
++						class_remove_file(&product_id_class, &product_id_class_attributes[i].attr);
++					}
++				}
++				class_unregister(&product_id_class);
++				return -EPERM;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int omap3logic_extract_nvs_data(u8 *nvs_data, u32 *nvs_data_size)
++{
++	return omap3logic_extract_new_nvs_data(nvs_data, nvs_data_size);
++}
++/* Extract the version code for the SOM */
++int omap3logic_extract_version_code(void)
++{
++	int err;
++	u32 version_code;
++
++	err = omap3logic_extract_new_version_code(&version_code);
++	if (!err)
++		return version_code;
++
++	return -EINVAL;
++}
++
++#ifdef EEPROM_PATH
++
++
++static inline ssize_t
++spl_kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
++{
++	return kernel_read(file, buf, count, pos);
++}
++
++static int read_eeprom(void)
++{
++
++	struct file *f;
++	mm_segment_t fs;
++	loff_t pos = 0;
++	long sz;
++
++	struct id_header hdr;
++	struct id_checksums xsums;
++
++	f = filp_open(EEPROM_PATH, O_RDONLY, 0);
++	if (IS_ERR(f))
++		printk(KERN_ALERT "filp_open error!!.\n");
++	else{
++		fs = get_fs();
++		set_fs(KERNEL_DS);
++
++		/* Read the header */
++		sz = sizeof(hdr);
++		spl_kernel_read(f, (void *)&hdr, sz, &pos);
++
++		/* Read the checksums */
++		sz = sizeof(xsums);
++		spl_kernel_read(f, (void *)&xsums, sz, &pos);
++
++		/* Size of data = header + 2 LE Checksums + data_length */
++		sz = sizeof(hdr) + sizeof(xsums) + hdr.data_length;
++
++		id_data_buf = (char *)kzalloc(sz, GFP_KERNEL);
++		if (id_data_buf == NULL) {
++			printk("KZMALLOC ERROR\n");
++			filp_close(f, NULL);
++			return -1;
++		}
++		/* Copy the header into the final space */
++		memcpy(&id_data_buf[0], &hdr, sizeof(hdr));
++
++		/* Copy the checksums into the final space */
++		memcpy(&(id_data_buf[sizeof(hdr)]), &xsums, sizeof(xsums));
++
++		/* Only read the data_length worth of data */
++		sz = hdr.data_length;
++		spl_kernel_read(f, (void *)&id_data_buf[sizeof(hdr) + sizeof(xsums)], sz, &pos);
++		set_fs(fs);
++		filp_close(f, NULL);
++		return 0;
++	}
++	return -1;
++}
++#endif
++
++static int __init productid_init(void)
++{
++#ifdef EEPROM_PATH
++	read_eeprom();
++#endif
++	omap3logic_init_new_product_id();
++	omap3logic_create_new_product_id_sysfs();
++	return 0;
++}
++
++module_init(productid_init);
++
++static void __exit productid_exit(void)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(product_id_class_attributes); ++i) {
++		class_remove_file(&product_id_class, &product_id_class_attributes[i].attr);
++	}
++	class_unregister(&product_id_class);
++}
++
++module_exit(productid_exit);
++
++EXPORT_SYMBOL(omap3logic_extract_nvs_data);
++EXPORT_SYMBOL(omap3logic_extract_version_code);
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("Adam Ford <adam.ford@logicpd.com>");
++MODULE_DESCRIPTION("Logic PD EEPROM reader");
++MODULE_VERSION("printk");
++
+diff --git a/drivers/thermal/ti-soc-thermal/ti-bandgap.c b/drivers/thermal/ti-soc-thermal/ti-bandgap.c
+index 2fa78f738568..14dabe68ba6b 100644
+--- a/drivers/thermal/ti-soc-thermal/ti-bandgap.c
++++ b/drivers/thermal/ti-soc-thermal/ti-bandgap.c
+@@ -26,10 +26,20 @@
+ #include <linux/of_irq.h>
+ #include <linux/of_gpio.h>
+ #include <linux/io.h>
++#include <linux/cpu_pm.h>
++#include <linux/device.h>
++#include <linux/pm_runtime.h>
++#include <linux/pm.h>
++#include <linux/of.h>
++#include <linux/of_device.h>
+ 
+ #include "ti-bandgap.h"
+ 
+ static int ti_bandgap_force_single_read(struct ti_bandgap *bgp, int id);
++#ifdef CONFIG_PM_SLEEP
++static int bandgap_omap_cpu_notifier(struct notifier_block *nb,
++				  unsigned long cmd, void *v);
++#endif
+ 
+ /***   Helper functions to access registers and their bitfields   ***/
+ 
+@@ -1025,6 +1035,11 @@ int ti_bandgap_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
++#ifdef CONFIG_PM_SLEEP
++	bgp->nb.notifier_call = bandgap_omap_cpu_notifier;
++	cpu_pm_register_notifier(&bgp->nb);
++#endif
++
+ 	return 0;
+ 
+ remove_last_cooling:
+@@ -1060,7 +1075,9 @@ int ti_bandgap_remove(struct platform_device *pdev)
+ 	struct ti_bandgap *bgp = platform_get_drvdata(pdev);
+ 	int i;
+ 
+-	/* First thing is to remove sensor interfaces */
++	cpu_pm_unregister_notifier(&bgp->nb);
++
++	/* Remove sensor interfaces */
+ 	for (i = 0; i < bgp->conf->sensor_count; i++) {
+ 		if (bgp->conf->sensors[i].unregister_cooling)
+ 			bgp->conf->sensors[i].unregister_cooling(bgp, i);
+@@ -1171,9 +1188,43 @@ static int ti_bandgap_suspend(struct device *dev)
+ 	if (TI_BANDGAP_HAS(bgp, CLK_CTRL))
+ 		clk_disable_unprepare(bgp->fclock);
+ 
++	bgp->is_suspended = true;
++
+ 	return err;
+ }
+ 
++static int bandgap_omap_cpu_notifier(struct notifier_block *nb,
++				  unsigned long cmd, void *v)
++{
++	struct ti_bandgap *bgp;
++
++	bgp = container_of(nb, struct ti_bandgap, nb);
++
++	spin_lock(&bgp->lock);
++	switch (cmd) {
++	case CPU_CLUSTER_PM_ENTER:
++		if (bgp->is_suspended)
++			break;
++		ti_bandgap_save_ctxt(bgp);
++		ti_bandgap_power(bgp, false);
++		if (TI_BANDGAP_HAS(bgp, CLK_CTRL))
++			clk_disable(bgp->fclock);
++		break;
++	case CPU_CLUSTER_PM_ENTER_FAILED:
++	case CPU_CLUSTER_PM_EXIT:
++		if (bgp->is_suspended)
++			break;
++		if (TI_BANDGAP_HAS(bgp, CLK_CTRL))
++			clk_enable(bgp->fclock);
++		ti_bandgap_power(bgp, true);
++		ti_bandgap_restore_ctxt(bgp);
++		break;
++	}
++	spin_unlock(&bgp->lock);
++
++	return NOTIFY_OK;
++}
++
+ static int ti_bandgap_resume(struct device *dev)
+ {
+ 	struct ti_bandgap *bgp = dev_get_drvdata(dev);
+@@ -1182,6 +1233,7 @@ static int ti_bandgap_resume(struct device *dev)
+ 		clk_prepare_enable(bgp->fclock);
+ 
+ 	ti_bandgap_power(bgp, true);
++	bgp->is_suspended = false;
+ 
+ 	return ti_bandgap_restore_ctxt(bgp);
+ }
+diff --git a/drivers/thermal/ti-soc-thermal/ti-bandgap.h b/drivers/thermal/ti-soc-thermal/ti-bandgap.h
+index bb9b0f7faf99..a21d07a1a23a 100644
+--- a/drivers/thermal/ti-soc-thermal/ti-bandgap.h
++++ b/drivers/thermal/ti-soc-thermal/ti-bandgap.h
+@@ -12,6 +12,10 @@
+ #include <linux/spinlock.h>
+ #include <linux/types.h>
+ #include <linux/err.h>
++#include <linux/cpu_pm.h>
++#include <linux/device.h>
++#include <linux/pm_runtime.h>
++#include <linux/pm.h>
+ 
+ /**
+  * DOC: bandgap driver data structure
+@@ -201,6 +205,8 @@ struct ti_bandgap {
+ 	int				irq;
+ 	int				tshut_gpio;
+ 	u32				clk_rate;
++	struct notifier_block		nb;
++	unsigned int is_suspended:1;
+ };
+ 
+ /**
+diff --git a/drivers/video/fbdev/omap2/omapfb/displays/panel-dpi.c b/drivers/video/fbdev/omap2/omapfb/displays/panel-dpi.c
+index 37c9f5bfaefe..9a5e33009bd7 100644
+--- a/drivers/video/fbdev/omap2/omapfb/displays/panel-dpi.c
++++ b/drivers/video/fbdev/omap2/omapfb/displays/panel-dpi.c
+@@ -12,7 +12,7 @@
+ #include <linux/slab.h>
+ #include <linux/of.h>
+ #include <linux/of_gpio.h>
+-
++#include <linux/delay.h>
+ #include <video/omapfb_dss.h>
+ #include <video/omap-panel-data.h>
+ #include <video/of_display_timing.h>
+@@ -76,12 +76,16 @@ static int panel_dpi_enable(struct omap_dss_device *dssdev)
+ 		in->ops.dpi->set_data_lines(in, ddata->data_lines);
+ 	in->ops.dpi->set_timings(in, &ddata->videomode);
+ 
++	msleep(300);
++
+ 	r = in->ops.dpi->enable(in);
+ 	if (r)
+ 		return r;
+ 
+ 	gpiod_set_value_cansleep(ddata->enable_gpio, 1);
+ 
++	msleep(300);
++
+ 	if (gpio_is_valid(ddata->backlight_gpio))
+ 		gpio_set_value_cansleep(ddata->backlight_gpio, 1);
+ 
+-- 
+2.17.1
+
